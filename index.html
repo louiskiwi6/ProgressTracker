@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tracker</title>
+<!-- This public page holds no personal data: everything is loaded from a private GitHub repo with a token. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tracker">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#7a1f3d">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --maxw:1720px;
+  --maroon:#7a1f3d;
+  --bg:#f6f4f0; --surface:#ffffff; --surface-2:#f4f1ec; --border:#e6e1d9; --text:#231b1e; --muted:#6c6266; --faint:#9b9296;
+  --accent:#7a1f3d; --accent-soft:#f6e9ee; --on-accent:#fff;
+  --danger:#b42318; --danger-soft:#fdecea; --warn:#a15c07; --warn-soft:#fdf3e1; --ok:#2e7d4f; --ok-soft:#e6f3ea;
+  --c-P1:#4a6fa5; --c-P2:#c47a2c; --c-P2b:#8a6a52; --c-P3:#7b5ea7; --c-P4:#3f8a5a; --c-P4c:#2f8585; --c-PX:#b4537a; --c-CW:#8f878a; --c-PXo:#8f878a;
+  --shadow:0 1px 2px rgba(35,27,30,.04);
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --serif:"Source Serif 4","Iowan Old Style","Palatino Linotype",Georgia,serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --maroon:#9b3357;
+  --bg:#050505; --surface:#0c0b0b; --surface-2:#151314; --border:#252122; --text:#ece7e5; --muted:#a39a9d; --faint:#6f6769;
+  --accent:#e4a0b5; --accent-soft:#2a141c; --on-accent:#1a0910;
+  --danger:#f28b82; --danger-soft:#2a1412; --warn:#f0b35b; --warn-soft:#271c0b; --ok:#7ccf9a; --ok-soft:#0f2218;
+  --c-P1:#7f9fd3; --c-P2:#e2a160; --c-P2b:#c09a7f; --c-P3:#a98bd6; --c-P4:#74bf8e; --c-P4c:#62bcbc; --c-PX:#dc86a8; --c-CW:#a39a9d; --c-PXo:#a39a9d;
+  --shadow:none;
+}}
+:root[data-theme="dark"]{
+  --maroon:#9b3357;
+  --bg:#050505; --surface:#0c0b0b; --surface-2:#151314; --border:#252122; --text:#ece7e5; --muted:#a39a9d; --faint:#6f6769;
+  --accent:#e4a0b5; --accent-soft:#2a141c; --on-accent:#1a0910;
+  --danger:#f28b82; --danger-soft:#2a1412; --warn:#f0b35b; --warn-soft:#271c0b; --ok:#7ccf9a; --ok-soft:#0f2218;
+  --c-P1:#7f9fd3; --c-P2:#e2a160; --c-P2b:#c09a7f; --c-P3:#a98bd6; --c-P4:#74bf8e; --c-P4c:#62bcbc; --c-PX:#dc86a8; --c-CW:#a39a9d; --c-PXo:#a39a9d;
+  --shadow:none;
+}
+/* dark mode: square corners everywhere except the round status dots */
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) *:not(.dot){border-radius:0 !important} }
+:root[data-theme="dark"] *:not(.dot){border-radius:0 !important}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14.5px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:4px 28px 56px}
+header{position:sticky;top:0;z-index:5;background:var(--surface);border-top:3px solid var(--maroon);border-bottom:1px solid var(--border)}
+.hrow{max-width:var(--maxw);margin:0 auto;padding:10px 28px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{width:32px;height:40px;flex:none;display:block}
+/* Backup/Export/Import/theme always wrap as one block, never leaving ◐ alone on a line */
+.hactions{display:flex;align-items:center;gap:14px;flex-wrap:nowrap;flex:none;margin-left:auto}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.eyebrow.uni{color:var(--muted);font-size:10px;line-height:1.3}
+h1{font:600 21px/1.15 var(--serif);margin:1px 0 0;letter-spacing:-.005em}
+.meta{font-size:12.5px;color:var(--muted)}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600;font-size:12.5px}
+nav{display:flex;gap:2px;margin-left:18px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{background:none;border:0;padding:7px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:500;white-space:nowrap}
+nav button:hover{color:var(--text)}
+nav button[aria-selected="true"]{color:var(--accent);background:var(--accent-soft);font-weight:600}
+@media (max-width:1180px){nav{order:10;flex-basis:100%;margin:0 -4px}}
+@media (max-width:640px){.wrap{padding-left:16px;padding-right:16px}.hrow{padding-left:16px;padding-right:16px}.meta{display:none}}
+/* page layouts for wide screens */
+.ov{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));align-items:start;margin-top:24px}
+.courses{columns:560px;column-gap:16px;margin-top:16px}
+.courses>.card{break-inside:avoid;margin-bottom:16px}
+.wk-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start;margin-top:14px}
+.wk-side{display:flex;flex-direction:column;gap:16px;position:sticky;top:84px}
+.wk-side input[name=title]{flex-basis:100%}
+@media (max-width:1300px){.wk-layout{grid-template-columns:1fr}.wk-side{position:static}}
+.btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 11px;cursor:pointer;font-size:13px;font-weight:500}
+.btn:hover{border-color:var(--faint)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.ghost{border-color:transparent;background:none;color:var(--muted)}
+.btn.ghost:hover{color:var(--accent)}
+.icon-btn{background:none;border:0;cursor:pointer;color:var(--faint);padding:2px 6px;border-radius:6px}
+.icon-btn:hover{color:var(--danger);background:var(--danger-soft)}
+section,main>details{margin-top:24px}
+h2{font-size:15px;margin:0 0 12px;font-weight:600;letter-spacing:-.005em}
+h3{font-size:14.5px;margin:0;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:12px}
+.g-stats{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.g-cards{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.stat .v{font:600 30px/1.1 var(--serif);margin-top:6px;font-variant-numeric:tabular-nums}
+.stat .v small{font:500 14px var(--sans);color:var(--faint)}
+.bar{height:5px;background:var(--surface-2);border-radius:99px;overflow:hidden;margin-top:8px}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:13px} .tiny{font-size:12px}
+.row{display:flex;align-items:center;gap:8px}
+.between{justify-content:space-between}
+.wrapflex{flex-wrap:wrap}
+.tag{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:6px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.warn{background:var(--warn-soft);color:var(--warn)} .tag.danger{background:var(--danger-soft);color:var(--danger)} .tag.acc{background:var(--accent-soft);color:var(--accent)}
+.list{display:flex;flex-direction:column}
+.li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--border)}
+.li:first-child{border-top:0}
+.when{min-width:92px;font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted)}
+input[type=text],input[type=date],input[type=number],select,textarea{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 8px}
+textarea{width:100%;min-height:84px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
+.empty{color:var(--faint);font-size:13px;padding:8px 0}
+.banner{background:var(--surface-2);color:var(--muted);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;margin-top:20px}
+.banner b{color:var(--text)}
+/* week view */
+.weeknav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.days{display:grid;grid-template-columns:1fr 1fr .55fr .55fr 1fr 1fr 1fr;gap:8px}
+.day{background:var(--surface);border:1px solid var(--border);border-radius:10px;min-height:150px;padding:8px;display:flex;flex-direction:column;gap:5px}
+.day.today{border-color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
+.day.weekend{background:transparent;border-style:dashed}
+.dh{display:flex;justify-content:space-between;font-size:12px;font-weight:650;color:var(--muted);margin-bottom:2px}
+.day.today .dh{color:var(--accent)}
+.chip{border-left:3px solid var(--cc,var(--faint));background:var(--surface-2);border-radius:6px;padding:4px 6px;font-size:12px;line-height:1.3}
+.chip b{font-weight:650}
+.chip .t{color:var(--muted);font-variant-numeric:tabular-nums}
+.chip.lec{background:none;border-left-width:2px;padding:2px 6px;color:var(--muted)}
+.chip.supo{background:color-mix(in srgb,var(--cc) 11%,var(--surface))}
+.chip.deadline{border-left-color:var(--danger);background:var(--danger-soft)}
+.chip.test{border-left-color:var(--danger);background:var(--danger-soft)}
+.chip.issue{border-left-style:dashed}
+.chip.done{opacity:.55;text-decoration:line-through}
+@media (min-width:861px){.day{min-height:calc(100vh - 190px)}}
+@media (max-width:860px){.days{grid-template-columns:1fr}.day{min-height:0}.day.weekend:not(.has){display:none}}
+/* papers */
+.qgrid{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.q{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.q[data-s="done"]{background:var(--ok);border-color:var(--ok);color:#fff}
+.q[data-s="part"]{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.q[data-s="stuck"]{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
+.stepper{display:inline-flex;align-items:stretch;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)}
+.stepper button{border:0;background:var(--surface-2);width:28px;cursor:pointer;font-weight:700;color:var(--text)}
+.stepper button:hover:not(:disabled){background:var(--accent-soft);color:var(--accent)}
+.stepper button:disabled{opacity:.4;cursor:default}
+.stepper input{border:0;border-radius:0;width:44px;text-align:center;padding:4px 2px;-moz-appearance:textfield}
+.stepper input::-webkit-inner-spin-button,.stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.editrow{margin-top:8px;padding:8px 10px;background:var(--surface-2);border-radius:8px;width:fit-content;max-width:100%;gap:10px;flex-wrap:wrap}
+.btn:disabled{opacity:.5;cursor:default}
+.badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:99px;font-size:11px;font-weight:700;line-height:18px;text-align:center;color:#fff;vertical-align:1px}
+.badge.warn{background:var(--warn)} .badge.danger{background:var(--danger)}
+.reminder{border-left:3px solid var(--warn);margin-top:20px}
+.reminder h2{color:var(--warn)}
+.reminder.bad{border-left-color:var(--danger)}
+.reminder.bad h2{color:var(--danger)}
+.reminder .li{align-items:center;border-top-color:color-mix(in srgb,var(--border) 60%,transparent)}
+.tbl tr.wu td{background:var(--warn-soft)}
+.allbtn{height:30px;margin-left:6px;padding:0 10px;color:var(--ok);border-color:var(--ok)}
+.allbtn:hover{background:var(--ok-soft);border-color:var(--ok)}
+.paper{padding:12px 0;border-top:1px solid var(--border)}
+.paper:first-of-type{border-top:0}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid var(--border)}
+.coursehead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+/* table-ish */
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--border)}
+.tbl td{padding:8px;border-bottom:1px solid var(--border);vertical-align:top}
+.tbl tr.past td{color:var(--muted)}
+.tbl tr.wk td{background:var(--surface-2);font-size:12px;font-weight:650;color:var(--muted);padding:5px 8px}
+.tbl-wrap{overflow-x:auto}
+.todo{display:flex;align-items:center;gap:8px;padding:3px 0}
+.todo.done span{text-decoration:line-through;color:var(--faint)}
+.todo span{flex:1}
+details summary{cursor:pointer;color:var(--muted);font-size:13px}
+.qdots{display:flex;gap:3px;margin-top:8px}
+.qdots i{flex:1;max-width:26px;height:6px;border-radius:2px;background:var(--border)}
+.qdots i[data-s="done"]{background:var(--ok)} .qdots i[data-s="part"]{background:var(--warn)} .qdots i[data-s="stuck"]{background:var(--danger)}
+.crow{cursor:pointer;border-radius:8px;padding:6px 8px;margin:-6px -8px}
+.crow:hover{background:var(--surface-2)}
+.segs{display:flex;gap:4px;margin-top:7px}
+.segs span{flex:1;height:8px;border-radius:3px;background:var(--border);overflow:hidden}
+.segs span i{display:block;height:100%;background:var(--cc)}
+.segs span.future{background:none;box-shadow:inset 0 0 0 1px var(--border);background-image:repeating-linear-gradient(135deg,transparent 0 3px,var(--border) 3px 4px)}
+.btn.sy{white-space:nowrap}
+.btn.sy[data-st="ok"],.btn.sy[data-st="idle"]{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%,var(--border))}
+.btn.sy[data-st="busy"]{color:var(--muted)}
+.btn.sy[data-st="offline"]{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--border))}
+.btn.sy[data-st="auth"],.btn.sy[data-st="error"]{color:var(--danger);border-color:var(--danger);background:var(--danger-soft)}
+.setup label{display:flex;flex-direction:column;gap:4px;font-weight:600}
+.setup input{font-weight:400}
+
+/* ---------- phone ---------- */
+.ov{grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr))}
+.g-cards{grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))}
+@media (max-width:640px){
+  header{padding-top:env(safe-area-inset-top)}
+  .hrow{gap:8px 10px;padding-top:8px;padding-bottom:6px}
+  .logo{width:26px;height:32px}
+  h1{font-size:18px}
+  .eyebrow{font-size:10px} .eyebrow.uni{font-size:9px}
+  .wrap{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+  .card{padding:14px}
+  .g-stats{grid-template-columns:1fr 1fr}
+  .stat .v{font-size:24px}
+  /* tables become stacked cards */
+  .tbl thead{display:none}
+  .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
+  .tbl tr{padding:10px 0;border-bottom:1px solid var(--border)}
+  .tbl td{border:0;padding:3px 0;min-width:0 !important}
+  .tbl tr.wk{padding:0;border:0}
+  .tbl tr.wk td{padding:6px 8px;margin-top:6px}
+  .tbl td select{max-width:100%}
+  .when{min-width:74px}
+  .days{gap:6px}
+  .day{padding:8px 10px}
+}
+/* touch: bigger targets, and 16px inputs so iOS doesn't zoom in when typing */
+@media (pointer:coarse){
+  input[type=text],input[type=date],input[type=number],input[type=password],select,textarea{font-size:16px}
+  .btn{padding:8px 13px}
+  .seg button{padding:8px 12px;font-size:13.5px}
+  .q{width:40px;height:40px;font-size:13px}
+  .stepper button{width:38px}
+  input[type=checkbox]{width:20px;height:20px}
+  nav button{padding:9px 12px}
+  .icon-btn{padding:6px 10px}
+}
+input[type=password]{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 8px}
+.ptodos{margin-top:8px}
+.ptodos .todo{padding:2px 0;cursor:pointer}
+.pnotes{margin-top:8px;padding:8px 10px;background:var(--surface-2);border-left:2px solid var(--border);border-radius:0 6px 6px 0;font-size:13px;color:var(--muted);white-space:pre-wrap;cursor:pointer;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
+.pnotes:hover{border-left-color:var(--accent);color:var(--text)}
+.prep .stuck{margin:6px 0 0;padding-left:18px;font-size:13px}
+.prep details.more{margin-top:12px;border-top:1px solid var(--border);padding-top:8px}
+.prep details.more[open] summary{margin-bottom:6px}
+/* one-click status buttons */
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:12.5px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+.seg button:hover{border-color:var(--accent);color:var(--text)}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.seg button.wu[aria-pressed="true"]{background:var(--warn);border-color:var(--warn);color:#fff}
+.seg button.nm[aria-pressed="true"]{background:var(--surface-2);border-color:var(--faint);color:var(--text)}
+/* collapsible week rows + sections */
+.tbl tr.wk.fold td{cursor:pointer;user-select:none}
+.tbl tr.wk.fold td:hover{color:var(--text)}
+details.card>summary{list-style:none;display:flex;align-items:center;gap:8px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary h2{margin:0}
+details.card>summary::before{content:"▸";color:var(--faint)}
+details.card[open]>summary::before{content:"▾"}
+details.card[open]>summary{margin-bottom:10px}
+</style>
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <img class="logo" id="hLogo" alt="" hidden>
+    <div>
+      <div class="eyebrow uni" id="hUni"></div>
+      <div class="eyebrow" id="hEyebrow"></div>
+      <h1 id="hTitle">Tracker</h1>
+    </div>
+    <nav role="tablist" id="tabs"></nav>
+    <div class="spacer"></div>
+    <span class="meta" id="hMeta"></span>
+    <span class="pill" id="weekPill" hidden></span>
+    <div class="hactions">
+      <button class="btn sy" id="syncBtn" data-st="off" title="Sync settings">⚙ Settings</button>
+      <button class="btn ghost" id="themeBtn" title="Toggle light/dark" aria-label="Toggle light or dark theme">◐</button>
+    </div>
+  </div>
+</header>
+<main class="wrap" id="main"></main>
+
+<script>
+/* Timetable data (D) comes from data.json in the private repo; see the sync section at the bottom. */
+let D = null, TERM_START = "2026-10-08", GROUP = null;
+const KEY = "pia-michaelmas-2026-v1";
+
+/* ---------- state ---------- */
+const blank = () => ({ q:{}, qcount:{}, supo:{}, supoPaper:{}, prep:{}, labs:{}, labNames:{}, custom:[], showLec:true, showLabs:true, tab:"overview", week:null });
+// sections the user has expanded this session (prep cards, past weeks, finished labs); FOCUS = row we're jumping to
+const OPEN = new Set(); let FOCUS = null;
+function toggleOpen(key, isOpen){ isOpen ? OPEN.add(key) : OPEN.delete(key); }
+function toggleRows(key){ OPEN.has(key) ? OPEN.delete(key) : OPEN.add(key); const y=window.scrollY; render(); window.scrollTo(0,y); }
+let S;
+try { S = Object.assign(blank(), JSON.parse(localStorage.getItem(KEY) || "{}")); delete S.handed; } catch { S = blank(); }
+const QDEF = 10; // default questions per examples paper
+if((S.qver||0) < 2){ S.qcount = {}; S.qver = 2; } // one-time: put every paper on the 10-question default
+let saveWarned = false;
+function saveLocal(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){ if(!saveWarned){ saveWarned=true; alert("Couldn't save to this device's storage. Changes will still sync while the app is open."); } } }
+function save(){ saveLocal(); scheduleSync(); }
+
+/* ---------- dates ---------- */
+const pad = n => String(n).padStart(2,"0");
+const toISO = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const fromISO = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (s,n) => { const d = fromISO(s); d.setDate(d.getDate()+n); return toISO(d); };
+const diffDays = (a,b) => Math.round((fromISO(b)-fromISO(a))/864e5);
+const TODAY = toISO(new Date());
+const NOW_HM = `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`;
+const weekOf = s => Math.floor(diffDays(TERM_START,s)/7)+1;
+const weekStart = n => addDays(TERM_START,(n-1)*7);
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmt = s => { const d = fromISO(s); return `${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}`; };
+const t12 = hm => { let [h,m] = hm.split(":").map(Number); const ap = h>=12?"pm":"am"; h = h%12||12; return m?`${h}:${pad(m)}${ap}`:`${h}${ap}`; };
+const isPast = (date,end) => date < TODAY || (date===TODAY && (end||"23:59") <= NOW_HM);
+const rel = s => { const n = diffDays(TODAY,s); return n===0?"today":n===1?"tomorrow":n>1?`in ${n} days`:n===-1?"yesterday":`${-n} days ago`; };
+
+/* ---------- lookups ---------- */
+let C = {}, P = {}, SUPOS = [];
+const courseColor = id => `var(--c-${id})`;
+function initData(d){
+  D = d; const m = d.meta || {};
+  TERM_START = m.termStart || TERM_START; GROUP = m.group || GROUP;
+  C = Object.fromEntries(D.courses.map(c=>[c.id,c]));
+  P = Object.fromEntries(D.papers.map(p=>[p.id,p]));
+  SUPOS = D.groups[GROUP].supos;
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent = v||""; };
+  set("hUni", m.uni); set("hEyebrow", m.eyebrow); set("hTitle", m.title || "Tracker"); set("hMeta", m.metaLine);
+  const logo = document.getElementById("hLogo"); if(m.logo){ logo.src = m.logo; logo.alt = m.logoAlt || ""; logo.hidden = false; }
+  document.getElementById("weekPill").hidden = false;
+}
+const supoPaper = s => S.supoPaper[s.id] ?? s.paper;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function paperStats(pid){
+  const n = S.qcount[pid] ?? QDEF, q = S.q[pid] || {};
+  let done=0, part=0, stuck=[];
+  for(let i=1;i<=n;i++){ const v=q[i]; if(v==="done")done++; else if(v==="part")part++; else if(v==="stuck")stuck.push(i); }
+  const complete = n>0 && done===n;
+  return { n, done, part, stuck, complete, pct: n? Math.round(100*(done+part*0.5)/n) : 0 };
+}
+function qdots(pid){
+  const st = paperStats(pid), q = S.q[pid] || {};
+  return `<div class="qdots" title="${st.done} done${st.part?`, ${st.part} partly`:""}${st.stuck.length?`, ${st.stuck.length} stuck`:""} of ${st.n}">${[...Array(st.n)].map((_,i)=>`<i data-s="${q[i+1]||""}"></i>`).join("")}</div>`;
+}
+const issued = p => !p.issued || p.issued <= TODAY;
+const nextSupo = cid => SUPOS.find(s => s.course===cid && !S.supo[s.id]?.done && !isPast(s.date,s.end));
+
+/* ---------- tabs ---------- */
+const TABS = [["overview","Overview"],["week","Week view"],["supos","Supervisions"],["papers","Examples papers"],["labs","Labs"]];
+function renderTabs(){
+  const wu = writeups(), urgent = wu.some(w => !w.due || diffDays(TODAY,w.due) <= 1);
+  const badge = k => k==="labs" && wu.length ? ` <span class="badge ${urgent?"danger":"warn"}" title="${wu.length} lab write-up${wu.length>1?"s":""} outstanding">${wu.length}</span>` : "";
+  document.getElementById("tabs").innerHTML = TABS.map(([k,l]) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${badge(k)}</button>`).join("");
+  document.title = (wu.length ? `(${wu.length} write-up${wu.length>1?"s":""} due) ` : "") + (D.meta?.appTitle || "Tracker");
+}
+
+/* ---------- lab write-ups ---------- */
+const LAB_DONE = ["done","followup","submitted"];
+function writeups(){
+  return D.labs.filter(l => S.labs[l.id]?.status==="followup")
+    .map(l => ({ l, due: S.labs[l.id].due || "", notes: S.labs[l.id].notes || "" }))
+    .sort((a,b) => (a.due||"9999").localeCompare(b.due||"9999") || a.l.date.localeCompare(b.l.date));
+}
+function dueTag(due){
+  if(!due) return `<span class="tag warn">no deadline set</span>`;
+  const n = diffDays(TODAY,due);
+  const [cls,txt] = n<0 ? ["danger",`overdue by ${-n} day${n<-1?"s":""}`] : n===0 ? ["danger","due today"] : n===1 ? ["warn","due tomorrow"] : n<=3 ? ["warn",`due in ${n} days`] : ["acc",`due in ${n} days`];
+  return `<span class="tag ${cls}">${txt}</span>`;
+}
+function writeupPanel(){
+  const wu = writeups();
+  if(!wu.length) return "";
+  const worst = wu.some(w => w.due && diffDays(TODAY,w.due) < 0) || wu.some(w => w.due===TODAY);
+  return `<section class="card reminder ${worst?"bad":""}">
+    <div class="row between wrapflex"><h2 style="margin:0">⚠ Lab write-ups to hand in <span class="badge ${worst?"danger":"warn"}">${wu.length}</span></h2>
+      <span class="tiny muted">Tick "Submitted" when it's handed in.</span></div>
+    <div class="list" style="margin-top:6px">${wu.map(({l,due,notes}) => `<div class="li wrapflex">
+      <div style="flex:1;min-width:200px"><b class="small">${esc(l.name)}</b> <span class="tiny muted">lab on ${fmt(l.date)}</span>
+        ${notes?`<div class="tiny muted">${esc(notes)}</div>`:""}</div>
+      <label class="row small muted">Deadline <input type="date" value="${due}" onchange="labSet('${l.id}','due',this.value,true)"></label>
+      ${dueTag(due)}
+      <button class="btn" onclick="labSet('${l.id}','status','submitted')">✓ Submitted</button></div>`).join("")}</div>
+  </section>`;
+}
+document.getElementById("tabs").addEventListener("click", e => { const b=e.target.closest("[data-tab]"); if(!b) return; go(b.dataset.tab); });
+function go(tab, scrollTo){ S.tab=tab; VIEW=null; saveLocal(); FOCUS=scrollTo||null; render(); FOCUS=null; window.scrollTo(0,0); if(scrollTo){ const el=document.getElementById(scrollTo); if(el) el.scrollIntoView({block:"center"}); } }
+
+let VIEW = null; // null = normal tabs, "settings" = sync settings page
+function render(){
+  const m = document.getElementById("main");
+  if(!CFG){ document.getElementById("tabs").innerHTML=""; m.innerHTML = vSetup(); return; }
+  if(VIEW==="settings"){ if(D) renderTabs(); m.innerHTML = vSettings(); document.querySelectorAll("#tabs [aria-selected]").forEach(b=>b.setAttribute("aria-selected","false")); return; }
+  if(!D){ document.getElementById("tabs").innerHTML=""; m.innerHTML = vLoading(); return; }
+  renderTabs();
+  const w = weekOf(TODAY);
+  document.getElementById("weekPill").textContent = w<1 ? "Before term" : w>9 ? "Term over" : `Week ${w} · ${fmt(TODAY)}`;
+  m.innerHTML = ({overview:vOverview, week:vWeek, supos:vSupos, papers:vPapers, labs:vLabs})[S.tab]();
+}
+
+/* ---------- all dated items (for week view + upcoming) ---------- */
+function items(){
+  const out = [];
+  for(const s of SUPOS){ const p=P[supoPaper(s)]; out.push({ kind:"supo", date:s.date, start:s.start, end:s.end, course:s.course, id:s.id,
+    title:`Supo · ${C[s.course].name}`, sub: p? p.name.replace("Examples Paper","EP") : "", done: !!S.supo[s.id]?.done }); }
+  for(const l of D.labs){ const st=S.labs[l.id]?.status; if(st==="notmine") continue;
+    out.push({ kind:"lab", date:l.date, start:l.start, end:l.end, course:"CW", title:`Lab · ${l.name}`, sub: l.loc, done: LAB_DONE.includes(st), id:l.id }); }
+  for(const {l,due} of writeups()) if(due) out.push({ kind:"deadline", date:due, start:"", course:"CW", title:`Write-up due · ${l.name}`, sub:`Lab on ${fmt(l.date)}`, id:l.id, writeup:true });
+  for(const p of D.papers) if(p.issued) out.push({ kind:"issue", date:p.issued, start:"", course:p.course, title:`${C[p.course].name}`, sub:`${p.name.replace("Examples Paper","EP")} issued` });
+  for(const e of D.events) out.push({ kind:e.kind, date:e.date, start:e.start, end:e.end, title:e.title, course:"CW" });
+  for(const c of S.custom) out.push({ kind:c.type, date:c.date, start:c.time||"", title:c.title, course:"CW", custom:c.id, done:!!c.done });
+  return out;
+}
+const byTime = (a,b) => (a.date+(a.start||"00:00")).localeCompare(b.date+(b.start||"00:00"));
+
+/* ---------- Overview ---------- */
+function vOverview(){
+  const avail = D.papers.filter(issued);
+  const totQ = avail.reduce((a,p)=>a+paperStats(p.id).n,0), doneQ = avail.reduce((a,p)=>a+paperStats(p.id).done,0);
+  const papersDone = avail.filter(p=>paperStats(p.id).complete).length;
+  const supPast = SUPOS.filter(s=>isPast(s.date,s.end)), supDone = SUPOS.filter(s=>S.supo[s.id]?.done).length;
+  const myLabs = D.labs.filter(l=>S.labs[l.id]?.status!=="notmine"), labsDone = myLabs.filter(l=>LAB_DONE.includes(S.labs[l.id]?.status)).length, wuOut = writeups().length;
+  const stuckAll = avail.reduce((a,p)=>a+paperStats(p.id).stuck.length,0);
+  const stat = (k,v,of,pct,note="") => `<div class="card stat"><div class="k">${k}</div><div class="v">${v}${of!=null?` <small>/ ${of}</small>`:""}</div>${pct!=null?`<div class="bar"><i style="width:${pct}%"></i></div>`:""}${note?`<div class="tiny muted" style="margin-top:6px">${note}</div>`:""}</div>`;
+
+  const up = items().filter(i => i.kind!=="lec" && !i.done && !isPast(i.date,i.end) && diffDays(TODAY,i.date) <= 7).sort(byTime).slice(0,10);
+  const overdueTodos = S.custom.filter(c=>!c.done && c.date < TODAY && c.type!=="event");
+
+  const prepCards = D.courses.map(c => ({c, s: nextSupo(c.id)})).filter(x=>x.s).sort((a,b)=>byTime(a.s,b.s)).map(({c,s}) => {
+    const p = P[supoPaper(s)], st = p ? paperStats(p.id) : null, pr = S.prep[c.id] || {todos:[]};
+    const open = (pr.todos||[]).filter(t=>!t.done).length;
+    return `<div class="li"><span class="dot" style="background:${courseColor(c.id)};margin-top:6px"></span>
+      <div style="flex:1;min-width:0"><div class="row between wrapflex"><b>${esc(c.name)}</b><span class="small muted">${fmt(s.date)} ${t12(s.start)} · ${rel(s.date)}</span></div>
+      <div class="small muted">${p?esc(p.name):"Paper not set"}${st?` · ${st.done}/${st.n} Qs done`:""}${st&&st.stuck.length?` · <span style="color:var(--danger)">${st.stuck.length} to ask about</span>`:""}${open?` · ${open} to-do${open>1?"s":""}`:""}</div>
+      ${st?qdots(p.id):""}
+      ${(pr.todos||[]).some(t=>!t.done)?`<div class="ptodos">${pr.todos.map((t,i)=>t.done?"":`<label class="todo small"><input type="checkbox" onchange="prepTodo('${c.id}',${i})"><span>${esc(t.t)}</span></label>`).join("")}</div>`:""}
+      ${pr.notes&&pr.notes.trim()?`<div class="pnotes" onclick="go('supos')" title="Edit in the Supervisions tab">${esc(pr.notes.trim())}</div>`:""}</div></div>`;
+  }).join("");
+
+  return `
+  <section class="grid g-stats">
+    ${stat("Examples papers done", papersDone, avail.length, avail.length?100*papersDone/avail.length:0, `${D.papers.length-avail.length} still to be issued`)}
+    ${stat("Questions done", doneQ, totQ, totQ?100*doneQ/totQ:0, stuckAll?`${stuckAll} flagged to ask at a supo`:"Nothing flagged")}
+    ${stat("Supervisions", supDone, SUPOS.length, 100*supDone/SUPOS.length, `${supPast.length} scheduled so far`)}
+    ${stat("Labs attended", labsDone, myLabs.length, myLabs.length?100*labsDone/myLabs.length:0, wuOut?`<span style="color:var(--warn)">${wuOut} write-up${wuOut>1?"s":""} outstanding</span>`:"No write-ups outstanding")}
+  </section>
+  ${overdueTodos.length?`<div class="banner"><b>Overdue:</b> ${overdueTodos.map(t=>esc(t.title)+` (${fmt(t.date)})`).join(", ")}</div>`:""}
+  ${isEmpty() && BASE?`<div class="banner"><b>No progress saved yet.</b> Moving over from the old offline tracker? Bring its backup file in here: <label class="btn" style="margin-left:6px">Import backup file<input type="file" accept="application/json,.json" hidden onchange="importFile(event)"></label></div>`:""}
+  ${writeupPanel()}
+  <section class="ov">
+    <div class="card"><div class="row between"><h2>Next 7 days</h2><button class="btn ghost" onclick="go('week')">Week view →</button></div>
+      <div class="list">${up.length? up.map(i=>`<div class="li"><div class="when">${fmt(i.date)}<br>${i.start?t12(i.start):""}</div>
+        <span class="dot" style="background:${i.kind==="deadline"||i.kind==="test"?"var(--danger)":courseColor(i.course)};margin-top:6px"></span>
+        <div><b class="small">${esc(i.title)}</b><div class="tiny muted">${esc(i.sub||"")}</div></div></div>`).join("") : `<div class="empty">Nothing in the next week.</div>`}</div></div>
+    <div class="card"><div class="row between"><h2>Prep for next supervisions</h2><button class="btn ghost" onclick="go('supos')">Edit notes →</button></div>
+      <div class="list">${prepCards || `<div class="empty">No more supervisions this term.</div>`}</div></div>
+  <div class="card"><div class="row between"><h2>Examples papers by course</h2><button class="btn ghost" onclick="go('papers')">Papers →</button></div>
+    <div class="grid" style="grid-template-columns:1fr;gap:14px">
+    ${D.courses.map(c=>{ const ps=D.papers.filter(p=>p.course===c.id); const iss=ps.filter(issued);
+      const done=iss.filter(p=>paperStats(p.id).complete).length;
+      const note = !iss.length ? `first paper ${fmt(ps[0].issued)}` : `${done} of ${iss.length} done${ps.length>iss.length?` · ${ps.length-iss.length} to come`:""}`;
+      return `<div class="crow" onclick="go('papers','paper-${ps[0].id}')" title="Open in Examples papers"><div class="row between"><span class="small"><b>${esc(c.name)}</b></span><span class="tiny muted">${note}</span></div>
+      <div class="segs" style="--cc:${courseColor(c.id)}">${ps.map(p=>{ const st=paperStats(p.id);
+        return issued(p) ? `<span title="${esc(p.name)}: ${st.done}/${st.n} questions"><i style="width:${st.pct}%"></i></span>` : `<span class="future" title="${esc(p.name)}: issued ${fmt(p.issued)}"></span>`; }).join("")}</div></div>`; }).join("")}
+    </div></div>
+  </section>`;
+}
+
+/* ---------- Week view ---------- */
+function vWeek(){
+  const cur = Math.min(9, Math.max(1, weekOf(TODAY)));
+  const w = S.week ?? cur;
+  const start = weekStart(w);
+  const all = items().filter(i => S.showLabs || i.kind!=="lab");
+  if(S.showLec) for(const l of D.lectures) all.push({ kind:"lec", date:l.date, start:l.start, end:l.end, course:l.course, title:l.title, sub:`${l.code} L${l.n}${l.who?" · "+l.who:""}${l.note?" · "+l.note:""}` });
+  const days = [...Array(7)].map((_,i)=>addDays(start,i));
+  const cols = days.map(d => {
+    const its = all.filter(i=>i.date===d).sort(byTime);
+    const dow = fromISO(d).getDay(), wk = dow===0||dow===6;
+    return `<div class="day ${d===TODAY?"today":""} ${wk?"weekend":""} ${its.length?"has":""}"><div class="dh"><span>${fmt(d)}</span>${d===TODAY?"<span>Today</span>":""}</div>
+      ${its.map(chip).join("") || `<span class="tiny faint">—</span>`}</div>`;
+  }).join("");
+  const todos = S.custom.filter(c=>weekOf(c.date)===w).sort(byTime);
+  const wkWu = writeups().filter(x=>x.due && weekOf(x.due)===w);
+  return `<section>
+    <div class="weeknav">
+      <button class="btn" onclick="setWeek(${w-1})" ${w<=1?"disabled":""}>← Prev</button>
+      <h2 style="margin:0 6px">Week ${w} <span class="muted small" style="font-weight:500">${fmt(start)} – ${fmt(addDays(start,6))}</span></h2>
+      <button class="btn" onclick="setWeek(${w+1})" ${w>=9?"disabled":""}>Next →</button>
+      ${w!==cur?`<button class="btn ghost" onclick="setWeek(${cur})">This week</button>`:""}
+      <span class="spacer"></span>
+      <label class="row small muted"><input type="checkbox" ${S.showLec?"checked":""} onchange="S.showLec=this.checked;save();render()"> Show lectures</label>
+      <label class="row small muted"><input type="checkbox" ${S.showLabs?"checked":""} onchange="S.showLabs=this.checked;save();render()"> Show labs</label>
+    </div>
+    <div class="wk-layout">
+    <div class="days">${cols}</div>
+    <aside class="wk-side">
+    <div class="card"><h2>Add a deadline or to-do</h2>
+      <form class="row wrapflex" onsubmit="addCustom(event)">
+        <input type="text" name="title" placeholder="e.g. Exposition write-up due" required style="flex:1;min-width:180px">
+        <input type="date" name="date" value="${TODAY>=start&&TODAY<=addDays(start,6)?TODAY:start}" required>
+        <input type="text" name="time" placeholder="time (opt.)" pattern="[0-2]?[0-9]:[0-5][0-9]" title="24h, e.g. 14:00" style="width:110px">
+        <select name="type"><option value="deadline">Deadline</option><option value="todo">To-do</option><option value="event">Event</option></select>
+        <button class="btn primary">Add</button>
+      </form></div>
+    <div class="card"><h2>This week's deadlines & to-dos</h2>
+      <div class="list">${wkWu.map(({l,due})=>`<div class="todo"><input type="checkbox" title="Mark write-up submitted" onchange="labSet('${l.id}','status','submitted')">
+        <span><b class="small">Write-up · ${esc(l.name)}</b> <span class="tiny muted">${fmt(due)} · lab write-up</span> ${dueTag(due)}</span></div>`).join("")}${todos.map(c=>`<div class="todo ${c.done?"done":""}"><input type="checkbox" ${c.done?"checked":""} onchange="toggleCustom('${c.id}')">
+        <span><b class="small">${esc(c.title)}</b> <span class="tiny muted">${fmt(c.date)}${c.time?" "+t12(c.time):""} · ${c.type}</span></span>
+        <button class="icon-btn" title="Delete" onclick="delCustom('${c.id}')">✕</button></div>`).join("")}${todos.length||wkWu.length ? "" : `<div class="empty">None yet for week ${w}.</div>`}</div></div>
+    </aside></div>
+  </section>`;
+}
+function chip(i){
+  const time = i.start? `<span class="t">${t12(i.start)}${i.end?"–"+t12(i.end):""}</span> ` : "";
+  const goto = i.kind==="supo" ? ` onclick="go('supos','${i.id}')" style="--cc:${courseColor(i.course)};cursor:pointer"` : (i.kind==="lab"||i.writeup) ? ` onclick="go('labs','${i.id}')" style="--cc:${courseColor(i.course)};cursor:pointer"` : ` style="--cc:${courseColor(i.course)}"`;
+  return `<div class="chip ${i.kind} ${i.done?"done":""}"${goto} title="${esc(i.title)}${i.sub?" — "+esc(i.sub):""}">${time}<b>${esc(i.title)}</b>${i.sub?`<div class="faint">${esc(i.sub)}</div>`:""}</div>`;
+}
+function setWeek(n){ S.week=n; save(); render(); }
+function addCustom(e){ e.preventDefault(); const f=new FormData(e.target);
+  S.custom.push({ id: Math.random().toString(36).slice(2,9), title:f.get("title").trim(), date:f.get("date"), time:(f.get("time")||"").trim(), type:f.get("type"), done:false });
+  S.week = weekOf(f.get("date")); save(); render(); }
+function toggleCustom(id){ const c=S.custom.find(x=>x.id===id); c.done=!c.done; save(); render(); }
+function delCustom(id){ S.custom=S.custom.filter(x=>x.id!==id); save(); render(); }
+
+/* ---------- Supervisions ---------- */
+function vSupos(){
+  const upcoming = D.courses.map(c=>({c,s:nextSupo(c.id)})).filter(x=>x.s).sort((a,b)=>byTime(a.s,b.s));
+  const cards = upcoming.map(({c,s})=>{
+    const pid = supoPaper(s), p = P[pid], st = p? paperStats(pid) : null;
+    const pr = S.prep[c.id] || (S.prep[c.id] = {notes:"", todos:[]});
+    return `<div class="card prep" style="border-top:3px solid ${courseColor(c.id)}">
+      <div class="row between wrapflex"><h3>${esc(c.name)}</h3><span class="tag ${diffDays(TODAY,s.date)<=2?"warn":"acc"}">${rel(s.date)}</span></div>
+      <div class="small muted" style="margin-top:2px">${fmt(s.date)}, ${t12(s.start)}–${t12(s.end)} · ${esc(c.sup)} · ${esc(c.loc)}</div>
+      <div class="small" style="margin-top:8px">Covering: <b>${p?esc(p.name):"—"}</b>${p&&!issued(p)?` <span class="tag warn">issued ${fmt(p.issued)}</span>`:""}</div>
+      ${st?`<div class="row small muted" style="margin-top:4px"><span>${st.done}/${st.n} questions done</span><span class="spacer"></span><button class="btn ghost" onclick="go('papers','paper-${pid}')">Open paper →</button></div>${qdots(pid)}`:""}
+      ${st&&st.stuck.length?`<div class="small" style="margin-top:10px;color:var(--danger)"><b>Questions to ask about</b> (flagged on the paper):</div><ul class="stuck">${st.stuck.map(n=>`<li>Q${n}</li>`).join("")}</ul>`:""}
+      ${(()=>{ const todos = pr.todos||[], left = todos.filter(t=>!t.done).length, hasNotes = !!(pr.notes||"").trim();
+        const summary = [left?`${left} to-do${left>1?"s":""}`:(todos.length?"to-dos done":"no to-dos"), hasNotes?"notes":"no notes"].join(" · ");
+        return `<details class="more" ${OPEN.has("prep-"+c.id)?"open":""} ontoggle="toggleOpen('prep-${c.id}',this.open)"><summary>To-dos & notes <span class="faint">(${summary})</span></summary>
+      <div>${todos.map((t,i)=>`<div class="todo ${t.done?"done":""}"><input type="checkbox" ${t.done?"checked":""} onchange="prepTodo('${c.id}',${i})"><span class="small">${esc(t.t)}</span><button class="icon-btn" onclick="prepDel('${c.id}',${i})" title="Remove">✕</button></div>`).join("")}</div>
+      <form class="row" style="margin-top:6px" onsubmit="prepAdd(event,'${c.id}')"><input type="text" name="t" placeholder="Add a to-do (e.g. finish Q5, re-read notes on beams)" style="flex:1"><button class="btn">Add</button></form>
+      <div class="small" style="margin-top:12px"><b>Notes for the supo</b> <span class="faint tiny">(saved automatically)</span></div>
+      <textarea placeholder="Things to ask, topics you're unsure about, things the supervisor asked you to do…" oninput="prepNotes('${c.id}',this.value)">${esc(pr.notes)}</textarea>
+      <div class="row" style="margin-top:8px"><button class="btn" onclick="finishSupo('${s.id}')" title="Marks it done and moves these notes and to-dos into the supervision log">Mark supo done & archive notes</button></div>
+      </details>`; })()}
+    </div>`; }).join("");
+
+  // weeks whose supervisions are all in the past start folded; click the week bar to open
+  const byWeek = {}; for(const s of SUPOS) (byWeek[weekOf(s.date)] ||= []).push(s);
+  const pastWk = w => byWeek[w].every(s=>isPast(s.date,s.end));
+  if(FOCUS) { const f = SUPOS.find(s=>s.id===FOCUS); if(f && pastWk(weekOf(f.date))) OPEN.add("sw"+weekOf(f.date)); }
+  let lastW = null;
+  const rows = SUPOS.map(s=>{
+    const c=C[s.course], r=S.supo[s.id]||{}, past=isPast(s.date,s.end), w=weekOf(s.date);
+    const fold = pastWk(w), open = !fold || OPEN.has("sw"+w);
+    let head = "";
+    if(w!==lastW){
+      const list = byWeek[w], unmarked = list.filter(x=>!S.supo[x.id]?.done).length;
+      const info = fold ? ` <span class="faint" style="font-weight:500">· ${list.length} supervision${list.length>1?"s":""} · ${unmarked?`<span style="color:var(--warn)">${unmarked} not marked done</span>`:"all done"}</span>` : "";
+      head = fold ? `<tr class="wk fold" onclick="toggleRows('sw${w}')"><td colspan="5">${open?"▾":"▸"} Week ${w}${info}</td></tr>` : `<tr class="wk"><td colspan="5">Week ${w}</td></tr>`;
+    }
+    lastW=w;
+    if(!open) return head;
+    const opts = `<option value="" ${P[supoPaper(s)]?"":"selected"}>— No examples paper</option>` + D.papers.filter(p=>p.course===s.course).map(p=>`<option value="${p.id}" ${supoPaper(s)===p.id?"selected":""}>${esc(p.name)}</option>`).join("");
+    const flag = past && !r.done ? `<span class="tag warn">mark done?</span>` : r.done? `<span class="tag ok">done</span>` : "";
+    return `${head}<tr id="${s.id}" class="${past?"past":""}">
+      <td style="white-space:nowrap">${fmt(s.date)}<div class="tiny faint">${t12(s.start)}–${t12(s.end)}</div></td>
+      <td><span class="row"><span class="dot" style="background:${courseColor(s.course)}"></span>${esc(c.name)}</span><div class="tiny faint">${esc(c.sup)} · ${esc(c.loc)}</div></td>
+      <td><select onchange="S.supoPaper['${s.id}']=this.value;save();render()" aria-label="Paper covered">${opts}</select></td>
+      <td><label class="row small"><input type="checkbox" ${r.done?"checked":""} onchange="supoDone('${s.id}',this.checked)"> Done</label>${flag}</td>
+      <td style="min-width:240px"><details ${r.feedback||r.archived?"open":""}><summary>Feedback & notes</summary>
+        ${r.archived?`<div class="tiny muted" style="white-space:pre-wrap;margin:6px 0;padding:6px 8px;background:var(--surface-2);border-radius:6px">${esc(r.archived)}</div>`:""}
+        <textarea style="min-height:60px;margin-top:6px" placeholder="What the supervisor said, corrections, follow-ups…" oninput="supoFb('${s.id}',this.value)">${esc(r.feedback)}</textarea></details></td></tr>`;
+  }).join("");
+  return `<section><h2>Next supervision for each course</h2>
+    <div class="grid g-cards">${cards || `<div class="card empty">All supervisions done for Michaelmas 🎉</div>`}</div></section>
+    <section class="card"><div class="row between wrapflex"><h2>Supervision log</h2><span class="tiny muted">From the college supervision sheet, group ${esc(GROUP)}. "Paper covered" is a best guess: change it if needed.</span></div>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>When</th><th>Course</th><th>Paper covered</th><th>Status</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+}
+function prepAdd(e,cid){ e.preventDefault(); const v=e.target.t.value.trim(); if(!v) return; (S.prep[cid]||(S.prep[cid]={notes:"",todos:[]})).todos.push({t:v,done:false}); save(); render(); }
+function prepTodo(cid,i){ const t=S.prep[cid].todos[i]; t.done=!t.done; save(); render(); }
+function prepDel(cid,i){ S.prep[cid].todos.splice(i,1); save(); render(); }
+function prepNotes(cid,v){ (S.prep[cid]||(S.prep[cid]={notes:"",todos:[]})).notes=v; save(); }
+function supoDone(id,v){ (S.supo[id]||(S.supo[id]={})).done=v; save(); render(); }
+function supoFb(id,v){ (S.supo[id]||(S.supo[id]={})).feedback=v; save(); }
+function finishSupo(id){
+  const s = SUPOS.find(x=>x.id===id), pr = S.prep[s.course] || {notes:"",todos:[]};
+  const lines = [];
+  if(pr.todos.length) lines.push("Prep to-dos:\n"+pr.todos.map(t=>`${t.done?"[x]":"[ ]"} ${t.t}`).join("\n"));
+  if(pr.notes.trim()) lines.push("Prep notes:\n"+pr.notes.trim());
+  const r = S.supo[id] || (S.supo[id]={}); r.done=true; if(lines.length) r.archived=lines.join("\n\n");
+  // keep unfinished to-dos for the next supo, clear notes
+  S.prep[s.course] = { notes:"", todos: pr.todos.filter(t=>!t.done) };
+  save(); render();
+}
+
+/* ---------- Examples papers ---------- */
+function vPapers(){
+  const body = D.courses.map(c=>{
+    const ps = D.papers.filter(p=>p.course===c.id);
+    return `<div class="card"><div class="coursehead"><span class="dot" style="background:${courseColor(c.id)}"></span><h2 style="margin:0">${esc(c.name)}</h2><span class="tiny muted">${c.code} · ${esc(c.sup)}</span></div>
+      ${ps.map(p=>{ const st=paperStats(p.id), iss=issued(p), q=S.q[p.id]||{};
+        const sup = SUPOS.find(s=>supoPaper(s)===p.id);
+        return `<div class="paper" id="paper-${p.id}">
+          <div class="row between wrapflex"><div class="row wrapflex"><b>${esc(p.name)}</b>
+            ${!iss?`<span class="tag">issued ${fmt(p.issued)}</span>`: st.complete?`<span class="tag ok">done</span>` : st.done||st.part?`<span class="tag acc">${st.pct}%</span>`:`<span class="tag">not started</span>`}
+            ${st.stuck.length?`<span class="tag danger">${st.stuck.length} to ask</span>`:""}</div>
+            <div class="row small muted wrapflex">${p.issued&&iss?`<span>Issued ${fmt(p.issued)}</span>·`:""}${sup?`<span>Supo ${fmt(sup.date)}${S.supo[sup.id]?.done?" ✓":""}</span>`:"<span>No supo scheduled</span>"}
+              <button class="btn ghost" onclick="toggleEdit('${p.id}')" aria-expanded="${EDITING.has(p.id)}">${EDITING.has(p.id)?"Done":"✎ Edit"}</button></div></div>
+          ${EDITING.has(p.id)?`<div class="row small muted editrow">Number of questions
+            <span class="stepper" role="group" aria-label="Number of questions"><button onclick="setQc('${p.id}',${st.n-1})" ${st.n<=1?"disabled":""} aria-label="One fewer question">−</button><input type="number" min="1" max="40" value="${st.n}" onchange="setQc('${p.id}',this.value)" aria-label="Number of questions"><button onclick="setQc('${p.id}',${st.n+1})" ${st.n>=40?"disabled":""} aria-label="One more question">+</button></span></div>`:""}
+          <div class="qgrid">${[...Array(st.n)].map((_,i)=>`<button class="q" data-s="${q[i+1]||""}" onclick="cycleQ('${p.id}',${i+1})" title="Q${i+1}: click to change">${i+1}</button>`).join("")}${st.done<st.n?`<button class="btn allbtn" onclick="finishAll('${p.id}')" title="Mark every question on this paper done">✓ All done</button>`:""}</div>
+        </div>`; }).join("")}
+    </div>`;
+  }).join("");
+  return `<section class="row between wrapflex"><div class="legend"><span><i></i>Not started</span><span><i style="background:var(--ok)"></i>Done</span><span><i style="background:var(--warn-soft);border-color:var(--warn)"></i>Partly done</span><span><i style="background:var(--danger-soft);border-color:var(--danger)"></i>Stuck: ask at supo</span></div>
+    <span class="tiny muted">Click a question to cycle its status. "✓ All done" ticks off a whole paper. Use ✎ Edit to change its number of questions.</span></section><div class="courses">${body}</div>`;
+}
+const EDITING = new Set(); // papers whose settings are open (not saved)
+function finishAll(pid){
+  const st = paperStats(pid);
+  if(st.stuck.length && !confirm(`Q${st.stuck.join(", Q")} ${st.stuck.length>1?"are":"is"} flagged to ask at a supo. Mark ${st.stuck.length>1?"them":"it"} done too?`)) return;
+  const q = S.q[pid] || (S.q[pid] = {});
+  for(let i=1;i<=st.n;i++) q[i] = "done";
+  save(); render();
+}
+function toggleEdit(pid){ EDITING.has(pid) ? EDITING.delete(pid) : EDITING.add(pid); render(); }
+const ORDER = ["","done","part","stuck"];
+function cycleQ(pid,n){ const q=S.q[pid]||(S.q[pid]={}); q[n]=ORDER[(ORDER.indexOf(q[n]||"")+1)%ORDER.length]; if(!q[n]) delete q[n]; save();
+  render(); const nb=document.querySelector(`#paper-${CSS.escape(pid)} .q:nth-child(${n})`); if(nb) nb.focus({preventScroll:true}); }
+function setQc(pid,v){
+  v = Math.max(1, Math.min(40, parseInt(v) || QDEF));
+  const q = S.q[pid] || {}, lost = Object.keys(q).filter(k => +k > v);
+  if(lost.length && !confirm(`Q${lost.join(", Q")} already have a status. Hide them? (They come back if you add the questions again.)`)){ render(); return; }
+  S.qcount[pid] = v; save(); render();
+}
+
+/* ---------- Labs ---------- */
+function vLabs(){
+  const acts = [...new Set(D.labs.map(l=>l.name))].map(name=>{
+    const ls = D.labs.filter(l=>l.name===name && S.labs[l.id]?.status!=="notmine");
+    const done = ls.filter(l=>LAB_DONE.includes(S.labs[l.id]?.status)).length;
+    const fu = ls.filter(l=>S.labs[l.id]?.status==="followup").length;
+    const info = D.labs.find(l=>l.name===name && l.info)?.info;
+    return `<div><div class="row between"><span class="small"><b>${esc(name)}</b>${info?` <a class="tiny" href="${esc(info)}" target="_blank" rel="noopener" style="color:var(--accent)">Moodle ↗</a>`:""}</span><span class="tiny muted">${done}/${ls.length}${fu?` · <span style="color:var(--warn)">${fu} write-up due</span>`:""}</span></div>
+      <div class="bar"><i style="width:${ls.length?100*done/ls.length:0}%"></i></div></div>`;
+  }).join("");
+  const STATUS_BTNS = [["done","✓ Done",""],["followup","Write-up due","wu"],["submitted","Submitted",""],["notmine","Not mine","nm"]];
+  const tableRows = list => { let lastW=null; return list.map(l=>{
+    const r=S.labs[l.id]||{}, st=r.status||"", w=weekOf(l.date), past=isPast(l.date,l.end);
+    const head = w!==lastW?`<tr class="wk"><td colspan="4">Week ${w}</td></tr>`:""; lastW=w;
+    return `${head}<tr id="${l.id}" class="${past||st==="notmine"?"past":""} ${st==="followup"?"wu":""}" ${st==="notmine"?'style="opacity:.55"':""}>
+      <td style="white-space:nowrap">${fmt(l.date)}<div class="tiny faint">${t12(l.start)}–${t12(l.end)}</div></td>
+      <td><b class="small">${esc(l.name)}</b> <span class="tag">${esc(l.code)}</span><div class="tiny faint">${esc(l.loc)}${l.info?` · <a href="${esc(l.info)}" target="_blank" rel="noopener" style="color:var(--accent)">Moodle ↗</a>`:""}</div></td>
+      <td><div class="seg" role="group" aria-label="Status">${STATUS_BTNS.map(([v,label,cls])=>`<button class="${cls}" aria-pressed="${st===v}" onclick="labToggle('${l.id}','${v}')" title="${st===v?"Click again to clear":label}">${label}</button>`).join("")}</div>
+        ${past&&!st?'<div style="margin-top:4px"><span class="tag warn">mark?</span></div>':""}
+        ${st==="followup"?`<div class="row small wrapflex" style="margin-top:6px"><label class="row muted">Deadline <input type="date" id="due-${l.id}" value="${r.due||""}" onchange="labSet('${l.id}','due',this.value,true)"></label>${dueTag(r.due)}</div>`:""}</td>
+      <td style="min-width:200px"><input type="text" style="width:100%" value="${esc(r.notes)}" placeholder="Notes / what's due" onchange="labSet('${l.id}','notes',this.value)"></td></tr>`;
+  }).join(""); };
+  // finished = done, submitted or not mine; write-ups still due and unmarked past labs stay in the main list
+  const FINISHED = ["done","submitted","notmine"];
+  const active = D.labs.filter(l=>!FINISHED.includes(S.labs[l.id]?.status));
+  const finished = D.labs.filter(l=>FINISHED.includes(S.labs[l.id]?.status));
+  if(FOCUS && finished.some(l=>l.id===FOCUS)) OPEN.add("labs-finished");
+  const thead = `<thead><tr><th>When</th><th>Lab</th><th>Status</th><th>Notes</th></tr></thead>`;
+  return `${writeupPanel()}<div class="banner">From the lab timetable for <b>${esc(D.meta?.labGroups || "your lab groups")}</b>. Some labs have more than one slot because they're split between those groups. Click <b>Not mine</b> on any slot that isn't yours and it disappears from the week view. Click a highlighted button again to clear it.</div>
+  <section class="card"><h2>Lab activities</h2>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px">${acts}</div></section>
+  <section class="card"><h2>Lab sessions <span class="tiny muted" style="font-weight:500">${active.length} to come or to mark</span></h2>
+    ${active.length?`<div class="tbl-wrap"><table class="tbl">${thead}<tbody>${tableRows(active)}</tbody></table></div>`:`<div class="empty">Nothing left to do. Every lab is marked.</div>`}</section>
+  ${finished.length?`<details class="card" ${OPEN.has("labs-finished")?"open":""} ontoggle="toggleOpen('labs-finished',this.open)"><summary><h2>Finished & not mine <span class="tiny muted" style="font-weight:500">${finished.length}</span></h2></summary>
+    <div class="tbl-wrap"><table class="tbl">${thead}<tbody>${tableRows(finished)}</tbody></table></div></details>`:""}`;
+}
+function labToggle(id,v){ labSet(id,'status', S.labs[id]?.status===v ? "" : v); }
+function labSet(id,k,v,rerender){
+  (S.labs[id]||(S.labs[id]={}))[k]=v; save();
+  if(k==="status" || rerender){ const y=window.scrollY; render(); window.scrollTo(0,y); }
+  // just marked "write-up due" with no deadline yet: jump straight to the deadline box
+  if(k==="status" && v==="followup" && !S.labs[id].due){ const el=document.getElementById(`due-${id}`); if(el){ el.focus(); try{ el.showPicker(); }catch{} } }
+}
+
+/* ---------- backup file / theme ---------- */
+const backupJSON = () => JSON.stringify({ app:"pia-michaelmas", version:2, savedAt:new Date().toISOString(), data:S }, null, 1);
+function exportFile(){
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([backupJSON()],{type:"application/json"}));
+  a.download=`ia-michaelmas-progress-${TODAY}.json`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+// Import replaces the synced progress with the file's contents (device settings like the open tab are kept).
+function importFile(e){ const f=e.target.files[0]; if(!f) return; f.text().then(t=>{ try{ let o=JSON.parse(t); if(o && o.app==="pia-michaelmas" && o.data) o=o.data;
+  if(typeof o!=="object" || !o || !("q" in o || "supo" in o || "labs" in o)) throw 0;
+  if(!confirm("Replace your current progress with this backup? It will sync to your other devices.")) return;
+  const keep = Object.fromEntries(LOCAL_KEYS.map(k=>[k,S[k]])); S=Object.assign(blank(),o,keep); save(); render(); }catch{ alert("That file isn't a valid backup."); } }); e.target.value=""; }
+(function(){ let t; try{ t=localStorage.getItem(KEY+"-theme"); }catch{} if(t) document.documentElement.dataset.theme=t; })();
+document.getElementById("themeBtn").onclick = () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const t = dark?"light":"dark"; document.documentElement.dataset.theme=t; try{ localStorage.setItem(KEY+"-theme",t); }catch{}
+};
+const isEmpty = () => !Object.keys(S.q).length && !Object.keys(S.supo).length && !Object.keys(S.labs).length && !Object.keys(S.prep).some(k=>S.prep[k].notes||S.prep[k].todos?.length) && !S.custom.length;
+
+/* ---------- GitHub sync ----------
+   The public page has no data in it. On each device you paste a fine-grained token that can
+   only read/write one private repo. That repo holds:
+     data.json      timetable, supervisions, labs, papers (written by build/gen.py)
+     progress.json  your ticks, notes and to-dos (written by this page; every save is a commit)
+   Two devices editing at once are merged item by item (three-way merge against the last synced
+   copy), so one device never wipes the other's changes. If both changed the same item, the
+   device saving later wins. */
+const LOCAL_KEYS = ["tab","week","showLec","showLabs"];      // per-device, never synced
+const CFG_KEY = KEY+"-gh", BASE_KEY = KEY+"-base", DATA_KEY = KEY+"-data";
+let CFG = null; try { CFG = JSON.parse(localStorage.getItem(CFG_KEY)||"null"); } catch {}
+let BASE = null; try { BASE = JSON.parse(localStorage.getItem(BASE_KEY)||"null"); } catch {}   // {sha, data}: last copy agreed with GitHub
+const SY = { state:"idle", busy:false, again:false, timer:null, last:null, err:"" };
+try { SY.last = localStorage.getItem(KEY+"-lastsync"); } catch {}
+
+const isObj = v => v!==null && typeof v==="object" && !Array.isArray(v);
+function deq(a,b){
+  if(a===b) return true;
+  if(Array.isArray(a)&&Array.isArray(b)) return a.length===b.length && a.every((x,i)=>deq(x,b[i]));
+  if(isObj(a)&&isObj(b)){ const ka=Object.keys(a), kb=Object.keys(b); return ka.length===kb.length && ka.every(k=>deq(a[k],b[k])); }
+  return false;
+}
+function merge3(b,l,r){
+  if(deq(l,b)) return r;          // only the other device changed it (or nobody did)
+  if(deq(r,b)) return l;          // only this device changed it
+  if(isObj(l)&&isObj(r)){ const bb=isObj(b)?b:{}, out={};
+    for(const k of new Set([...Object.keys(bb),...Object.keys(l),...Object.keys(r)])){ const v=merge3(bb[k],l[k],r[k]); if(v!==undefined) out[k]=v; }
+    return out; }
+  return l;                       // both changed the same item: this (later-saving) device wins
+}
+// synced part of S, normalised; custom items keyed by id so they merge one by one
+function syncPart(s){
+  const o = JSON.parse(JSON.stringify(s)); for(const k of LOCAL_KEYS) delete o[k];
+  o.custom = Object.fromEntries((s.custom||[]).map(c=>[c.id,c]));
+  return o;
+}
+function applySync(d){
+  const keep = Object.fromEntries(LOCAL_KEYS.map(k=>[k,S[k]]));
+  S = Object.assign(blank(), JSON.parse(JSON.stringify(d)), keep);
+  S.custom = Object.values(d.custom||{});
+}
+const toFile = d => JSON.stringify({ app:"pia-michaelmas", version:2, savedAt:new Date().toISOString(), data:{...d, custom:Object.values(d.custom||{})} }, null, 1);
+function fromFile(text){ let o=JSON.parse(text); if(o && o.app==="pia-michaelmas" && o.data) o=o.data;
+  for(const k of LOCAL_KEYS) delete o[k]; o.custom = Array.isArray(o.custom) ? Object.fromEntries(o.custom.map(c=>[c.id,c])) : (o.custom||{}); return o; }
+
+/* GitHub contents API (CORS-enabled; the token never leaves this device except to api.github.com) */
+class GHError extends Error { constructor(status,msg){ super(msg); this.status=status; } }
+const ghURL = path => `https://api.github.com/repos/${encodeURIComponent(CFG.owner)}/${encodeURIComponent(CFG.repo)}/contents/${path}`;
+async function gh(path, opt={}, raw=false){
+  let r;
+  try { r = await fetch(ghURL(path), { ...opt, cache:"no-store", headers:{ "Authorization":`Bearer ${CFG.token}`, "Accept": raw?"application/vnd.github.raw+json":"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28", ...(opt.body?{"Content-Type":"application/json"}:{}) } }); }
+  catch(e){ throw new GHError(0, "offline"); }
+  if(r.status===404 && (!opt.method || opt.method==="GET")) return null;
+  if(!r.ok){ let m=""; try{ m=(await r.json()).message||""; }catch{} throw new GHError(r.status, m || r.statusText); }
+  return raw ? r.text() : r.json();
+}
+const b64dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,"")), c=>c.charCodeAt(0)));
+const b64enc = s => { const b=new TextEncoder().encode(s); let out=""; for(let i=0;i<b.length;i+=0x8000) out+=String.fromCharCode(...b.subarray(i,i+0x8000)); return btoa(out); };
+async function getProgress(){ const j = await gh("progress.json"); return j ? { sha:j.sha, data:fromFile(b64dec(j.content)) } : null; }
+async function putProgress(d, sha){
+  const j = await gh("progress.json", { method:"PUT", body: JSON.stringify({ message:`progress ${new Date().toISOString().slice(0,16).replace("T"," ")} (${DEVICE})`, content:b64enc(toFile(d)), ...(sha?{sha}:{}) }) });
+  return j.content.sha;
+}
+const DEVICE = /iPhone|iPad|Android/i.test(navigator.userAgent) ? "phone" : "computer";
+
+const dirty = () => !BASE || !deq(syncPart(S), BASE.data);
+function scheduleSync(delay=2500){ if(!CFG || !D) return; paintSync(); clearTimeout(SY.timer); SY.timer = setTimeout(sync, delay); }
+async function sync(){
+  if(!CFG || !D) return;
+  if(SY.busy){ SY.again = true; return; }
+  SY.busy = true; SY.state = "busy"; paintSync();
+  try{
+    const remote = await getProgress();
+    const local = syncPart(S);
+    let merged;
+    if(!remote) merged = local;                                         // first ever save
+    else if(!BASE) merged = isEmpty() ? remote.data : merge3({}, local, remote.data);   // new device
+    else merged = merge3(BASE.data, local, remote.data);
+    if(!deq(merged, local)){ applySync(merged); saveLocal(); renderSoon(); }
+    let sha = remote?.sha;
+    if(!remote || !deq(merged, remote.data)) sha = await putProgress(merged, remote?.sha);
+    BASE = { sha, data: merged }; localStorage.setItem(BASE_KEY, JSON.stringify(BASE));
+    SY.last = new Date().toISOString(); try{ localStorage.setItem(KEY+"-lastsync", SY.last); }catch{}
+    SY.state = "ok"; SY.err = "";
+  }catch(e){
+    if(e.status===409 || e.status===422){ SY.again = true; SY.state = "busy"; }      // the other device saved in between: merge again
+    else { SY.state = e.status===0 ? "offline" : (e.status===401||e.status===403||e.status===404) ? "auth" : "error"; SY.err = e.message; console.warn("sync", e); }
+  }finally{
+    SY.busy = false;
+    if(SY.again){ SY.again = false; setTimeout(sync, 400); }
+    else if(dirty() && SY.state==="ok") scheduleSync(500);
+    paintSync();
+  }
+}
+// don't re-render under the user's fingers: wait until they leave the text box
+let pendingRender = false;
+function renderSoon(){
+  const a = document.activeElement;
+  if(a && a.closest("#main") && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){ pendingRender = true; return; }
+  const y = window.scrollY; render(); window.scrollTo(0, y);
+}
+document.addEventListener("focusout", () => setTimeout(() => { if(pendingRender){ pendingRender=false; renderSoon(); } }, 0));
+
+function ago(iso){ if(!iso) return "never"; const m=Math.round((Date.now()-new Date(iso))/60000);
+  return m<1?"just now":m<60?`${m} min ago`:m<1440?`${Math.round(m/60)} h ago`:`${Math.round(m/1440)} days ago`; }
+function paintSync(){
+  const b = document.getElementById("syncBtn"); if(!b) return;
+  const pending = CFG && D && dirty();
+  const st = !CFG ? "off" : SY.state==="busy" || (pending && SY.state!=="offline" && SY.state!=="auth" && SY.state!=="error") ? "busy" : SY.state;
+  b.dataset.st = st;
+  b.textContent = { off:"⚙ Set up", busy:"↻ Saving…", ok:"✓ Synced", idle:"✓ Synced", offline: pending?"● Offline":"Offline", auth:"⚠ Token", error:"⚠ Sync error" }[st] || "⚙";
+  b.title = st==="ok"||st==="idle" ? `Synced with GitHub ${ago(SY.last)}. Click for settings.` :
+            st==="offline" ? (pending ? "Offline: changes are saved on this device and will sync when you're back online" : "Offline") :
+            st==="auth" ? "GitHub rejected the token or can't find the repo. Click to fix." :
+            st==="error" ? `Sync failed: ${SY.err}. Click for details.` : "Saving to GitHub…";
+}
+document.getElementById("syncBtn").onclick = () => { VIEW = VIEW==="settings" ? null : "settings"; render(); window.scrollTo(0,0); };
+
+/* ---------- setup + settings pages ---------- */
+function vSetup(){
+  return `<section class="card setup" style="max-width:560px;margin:32px auto 0">
+    <h2>Connect to your private data</h2>
+    <p class="small muted">This app keeps nothing on the public website. Your timetable and progress live in a <b>private GitHub repo</b>, and this device needs a token to read and write it. You only do this once per device.</p>
+    <form onsubmit="connect(event)" class="list" style="gap:12px">
+      <label class="small">GitHub username<input name="owner" type="text" required autocomplete="username" autocapitalize="off" spellcheck="false" value="${esc(localStorage.getItem(KEY+"-lastowner")||"")}" style="width:100%"></label>
+      <label class="small">Private repo name<input name="repo" type="text" required autocapitalize="off" spellcheck="false" value="${esc(localStorage.getItem(KEY+"-lastrepo")||"ia-tracker-data")}" style="width:100%"></label>
+      <label class="small">Fine-grained token<input name="token" type="password" required autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" style="width:100%"></label>
+      <div class="row wrapflex"><button class="btn primary" id="connectBtn">Connect</button><span class="small" id="connectMsg" style="color:var(--danger)"></span></div>
+    </form>
+    <p class="tiny faint" style="margin-top:14px">The token is stored only on this device and sent only to api.github.com. If you lose this device, revoke the token on GitHub (Settings → Developer settings → Fine-grained tokens).</p>
+  </section>`;
+}
+async function connect(e){
+  e.preventDefault(); const f = new FormData(e.target), msg = document.getElementById("connectMsg"), btn = document.getElementById("connectBtn");
+  const cfg = { owner:f.get("owner").trim(), repo:f.get("repo").trim(), token:f.get("token").trim() };
+  btn.disabled = true; msg.textContent = "Checking…"; msg.style.color = "var(--muted)";
+  const prev = CFG; CFG = cfg;
+  try{
+    const txt = await gh("data.json", {}, true);
+    if(txt===null) throw new GHError(404, "data.json not found in that repo");
+    const d = JSON.parse(txt);
+    localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); localStorage.setItem(DATA_KEY, txt);
+    localStorage.setItem(KEY+"-lastowner", cfg.owner); localStorage.setItem(KEY+"-lastrepo", cfg.repo);
+    // a different repo means a different sync history
+    if(!prev || prev.owner!==cfg.owner || prev.repo!==cfg.repo){ BASE = null; localStorage.removeItem(BASE_KEY); }
+    initData(d); VIEW = null; render(); sync();
+  }catch(err){
+    CFG = prev; btn.disabled = false; msg.style.color = "var(--danger)";
+    msg.textContent = err.status===401 ? "GitHub rejected that token." : err.status===403 ? "The token doesn't have access to that repo (check its repository access and Contents permission)." :
+      err.status===404 ? "Couldn't find data.json: check the username and repo name, and that the token can access the repo." : err.status===0 ? "No connection to GitHub." : "Something went wrong: " + err.message;
+  }
+}
+function vSettings(){
+  const pending = dirty();
+  const stTxt = { ok:"Synced", idle:"Synced", busy:"Saving…", offline:"Offline", auth:"GitHub rejected the token or can't find the repo", error:"Sync failed: "+esc(SY.err) }[SY.state] || SY.state;
+  const repoURL = `https://github.com/${encodeURIComponent(CFG.owner)}/${encodeURIComponent(CFG.repo)}`;
+  return `<section class="card" style="max-width:640px">
+    <div class="row between"><h2 style="margin:0">Sync</h2><button class="btn ghost" onclick="VIEW=null;render()">Close ✕</button></div>
+    <div class="list" style="margin-top:8px">
+      <div class="li"><div class="when">Repo</div><div><b class="small">${esc(CFG.owner)}/${esc(CFG.repo)}</b> <span class="tag">private</span></div></div>
+      <div class="li"><div class="when">Status</div><div class="small">${stTxt}${pending&&SY.state!=="busy"?` · <span style="color:var(--warn)">changes waiting to upload</span>`:""}<div class="tiny muted">Last synced ${ago(SY.last)} · this device: ${DEVICE}</div></div></div>
+      <div class="li"><div class="when">History</div><div class="small">Every save is a commit. <a href="${repoURL}/commits/HEAD/progress.json" target="_blank" rel="noopener" style="color:var(--accent)">See history on GitHub ↗</a></div></div>
+    </div>
+    <div class="row wrapflex" style="margin-top:14px"><button class="btn primary" onclick="sync().then(()=>VIEW==='settings'&&render())">Sync now</button><button class="btn" onclick="reloadData()">Reload timetable</button></div>
+  </section>
+  <section class="card" style="max-width:640px"><h2>Backup file</h2>
+    <p class="small muted" style="margin-top:0">GitHub already keeps every version. These are for moving progress in or out by hand, e.g. from the old offline tracker.</p>
+    <div class="row wrapflex"><button class="btn" onclick="exportFile()">Download backup</button>
+      <label class="btn">Import backup file…<input type="file" accept="application/json,.json" hidden onchange="importFile(event)"></label></div>
+  </section>
+  <section class="card" style="max-width:640px"><h2>This device</h2>
+    <p class="small muted" style="margin-top:0">Disconnecting removes the token, timetable and progress from this device only. Your data on GitHub is not touched.</p>
+    <div class="row wrapflex"><button class="btn" onclick="disconnect()">Disconnect this device</button></div>
+  </section>`;
+}
+async function reloadData(){
+  try{ const txt = await gh("data.json", {}, true); if(txt){ localStorage.setItem(DATA_KEY, txt); initData(JSON.parse(txt)); } render(); }
+  catch(e){ alert("Couldn't reload the timetable: " + (e.status===0 ? "no connection" : e.message)); }
+}
+function disconnect(){
+  if(dirty() && !confirm("Some changes on this device haven't reached GitHub yet and will be lost. Disconnect anyway?")) return;
+  if(!dirty() && !confirm("Disconnect this device? You'll need the token to connect again.")) return;
+  for(const k of [CFG_KEY, BASE_KEY, DATA_KEY, KEY, KEY+"-lastsync"]) localStorage.removeItem(k);
+  CFG = null; BASE = null; D = null; S = blank(); VIEW = null;
+  ["hUni","hEyebrow","hMeta"].forEach(id=>document.getElementById(id).textContent=""); document.getElementById("hTitle").textContent="Tracker";
+  document.getElementById("hLogo").hidden = true; document.getElementById("weekPill").hidden = true;
+  render(); paintSync();
+}
+function vLoading(){ return `<section class="card" style="max-width:560px;margin:32px auto 0"><h2>Loading…</h2><div class="small muted" id="loadMsg">Fetching your timetable from GitHub.</div></section>`; }
+
+/* ---------- start ---------- */
+async function boot(){
+  if(CFG){
+    const cached = localStorage.getItem(DATA_KEY);
+    if(cached){ try{ initData(JSON.parse(cached)); }catch{} }
+    render(); paintSync();
+    try{
+      const txt = await gh("data.json", {}, true);
+      if(txt && txt!==cached){ localStorage.setItem(DATA_KEY, txt); initData(JSON.parse(txt)); renderSoon(); }
+      if(txt===null) throw new GHError(404, "data.json not found");
+    }catch(e){
+      SY.state = e.status===0 ? "offline" : e.status ? "auth" : "error"; SY.err = e.message; paintSync();
+      if(!D){ const m=document.getElementById("loadMsg"); if(m) m.innerHTML = e.status===0 ? "No connection, and this device has no saved copy yet. Try again when you're online." : `GitHub said: ${esc(e.message)}. <a href="#" onclick="VIEW='settings';render();return false" style="color:var(--accent)">Check settings</a>`; }
+    }
+    if(D) sync();
+  } else { render(); paintSync(); }
+}
+// pull the other device's changes when coming back to the app, when back online, and every minute while open
+document.addEventListener("visibilitychange", () => { if(document.visibilityState==="visible") sync(); else if(dirty()) sync(); });
+window.addEventListener("online", () => sync());
+setInterval(() => { if(document.visibilityState==="visible") sync(); paintSync(); }, 60000);
+window.addEventListener("pagehide", () => { if(CFG && D && dirty()) sync(); });
+if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+try{ navigator.storage?.persist?.(); }catch{}
+boot();
+</script>
+</body>
+</html>
