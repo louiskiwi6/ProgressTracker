@@ -47,7 +47,7 @@ self.addEventListener("notificationclick", e => {
   const url = new URL(e.notification.data?.url || "./", self.registration.scope).href;
   e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(cs => {
     const c = cs.find(x => x.url.startsWith(self.registration.scope));
-    if (c) { c.postMessage({ goTab: "updates" }); return c.focus(); }
+    if (c) { c.postMessage({ goUrl: url }); return c.focus(); }
     return self.clients.openWindow(url);
   }));
 });
