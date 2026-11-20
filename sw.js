@@ -1,18 +1,29 @@
-// Lets the app open with no signal. Only the app's own files are cached here (no personal data:
-// the timetable and progress are cached by the page itself in this device's storage).
-// Network first, so a new version is picked up whenever you're online.
-const CACHE = "tracker-shell-v1";
+// Lets the app open with no signal. Only the app's own files and the PDF viewer library are cached here
+// (no personal data: the timetable and progress are cached by the page itself in this device's storage,
+// and examples papers the page has opened sit in the separate "tracker-papers" cache, which this file never deletes).
+// Network first for the app, so a new version is picked up whenever you're online.
+const CACHE = "tracker-shell-v2";
+const LIB = "tracker-lib-v1";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => (k.startsWith("tracker-shell-") && k !== CACHE) || (k.startsWith("tracker-lib-") && k !== LIB)).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
-  if (e.request.method !== "GET" || url.origin !== location.origin) return;   // GitHub API, fonts: straight to network
+  if (e.request.method !== "GET") return;
+  if (url.origin === "https://cdnjs.cloudflare.com" && url.pathname.startsWith("/ajax/libs/pdf.js/")) {
+    // versioned URLs never change: cache first, so the viewer works offline once it has been opened
+    e.respondWith(caches.open(LIB).then(c => c.match(e.request).then(hit => hit || fetch(e.request).then(r => {
+      if (r.ok) c.put(e.request, r.clone());
+      return r;
+    }))));
+    return;
+  }
+  if (url.origin !== location.origin) return;   // GitHub API, fonts: straight to network
   e.respondWith(
     fetch(e.request).then(r => {
       if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }

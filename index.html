@@ -253,6 +253,17 @@ details.card>summary h2{margin:0}
 details.card>summary::before{content:"▸";color:var(--faint)}
 details.card[open]>summary::before{content:"▾"}
 details.card[open]>summary{margin-bottom:10px}
+/* examples paper viewer */
+body.pv-open{overflow:hidden}
+#pdfv{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;background:var(--bg)}
+.pv-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;padding-top:max(8px,env(safe-area-inset-top));background:var(--surface);border-bottom:1px solid var(--border)}
+.pv-title{display:flex;align-items:center;gap:8px;min-width:0}
+.pv-title span.t{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.pv-tools{flex-shrink:0;gap:4px}
+.pv-body{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:12px;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.pv-page{margin:0 auto 12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18);border-radius:2px}
+.pv-page canvas{display:block;width:100%;height:100%}
+.pv-msg{max-width:480px;margin:48px auto;text-align:center;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -563,7 +574,7 @@ function vSupos(){
     return `${head}<tr id="${s.id}" class="${past?"past":""}">
       <td style="white-space:nowrap">${fmt(s.date)}<div class="tiny faint">${t12(s.start)}–${t12(s.end)}</div></td>
       <td><span class="row"><span class="dot" style="background:${courseColor(s.course)}"></span>${esc(c.name)}</span><div class="tiny faint">${esc(c.sup)} · ${esc(c.loc)}</div></td>
-      <td><select onchange="S.supoPaper['${s.id}']=this.value;save();render()" aria-label="Paper covered">${opts}</select></td>
+      <td><select onchange="S.supoPaper['${s.id}']=this.value;save();render()" aria-label="Paper covered">${opts}</select>${P[supoPaper(s)]?.pdf?` <button class="btn ghost" onclick="openPaper('${supoPaper(s)}')" title="Open the examples paper" aria-label="Open the examples paper">📄</button>`:""}</td>
       <td><label class="row small"><input type="checkbox" ${r.done?"checked":""} onchange="supoDone('${s.id}',this.checked)"> Done</label>${flag}</td>
       <td style="min-width:240px"><details ${r.feedback||r.archived?"open":""}><summary>Feedback & notes</summary>
         ${r.archived?`<div class="tiny muted" style="white-space:pre-wrap;margin:6px 0;padding:6px 8px;background:var(--surface-2);border-radius:6px">${esc(r.archived)}</div>`:""}
@@ -603,6 +614,7 @@ function vPapers(){
             ${!iss?`<span class="tag">issued ${fmt(p.issued)}</span>`: st.complete?`<span class="tag ok">done</span>` : st.done||st.part?`<span class="tag acc">${st.pct}%</span>`:`<span class="tag">not started</span>`}
             ${st.stuck.length?`<span class="tag danger">${st.stuck.length} to ask</span>`:""}</div>
             <div class="row small muted wrapflex">${p.issued&&iss?`<span>Issued ${fmt(p.issued)}</span>·`:""}${sup?`<span>Supo ${fmt(sup.date)}${S.supo[sup.id]?.done?" ✓":""}</span>`:"<span>No supo scheduled</span>"}
+              ${p.pdf?`<button class="btn ghost" onclick="openPaper('${p.id}')">📄 Open paper</button>`:""}
               <button class="btn ghost" onclick="toggleEdit('${p.id}')" aria-expanded="${EDITING.has(p.id)}">${EDITING.has(p.id)?"Done":"✎ Edit"}</button></div></div>
           ${EDITING.has(p.id)?`<div class="row small muted editrow">Number of questions
             <span class="stepper" role="group" aria-label="Number of questions"><button onclick="setQc('${p.id}',${st.n-1})" ${st.n<=1?"disabled":""} aria-label="One fewer question">−</button><input type="number" min="1" max="40" value="${st.n}" onchange="setQc('${p.id}',this.value)" aria-label="Number of questions"><button onclick="setQc('${p.id}',${st.n+1})" ${st.n>=40?"disabled":""} aria-label="One more question">+</button></span></div>`:""}
@@ -622,6 +634,109 @@ function finishAll(pid){
   save(); render();
 }
 function toggleEdit(pid){ EDITING.has(pid) ? EDITING.delete(pid) : EDITING.add(pid); render(); }
+
+/* ---------- examples paper viewer ----------
+   PDFs live in the private data repo (papers/<id>.pdf) and are fetched with the token, then kept in this
+   device's cache so they open offline. PDF.js draws them (iPhone Safari only shows page 1 of a PDF in a frame). */
+const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+const PAPER_CACHE = "tracker-papers";
+let pdfLib = null, PV = null;
+function loadPdfJs(){
+  return pdfLib ||= new Promise((ok, bad) => {
+    const s = document.createElement("script"); s.src = PDFJS + "pdf.min.js"; s.crossOrigin = "anonymous"; s.referrerPolicy = "no-referrer";
+    s.onload = () => { pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + "pdf.worker.min.js"; ok(pdfjsLib); };
+    s.onerror = () => { pdfLib = null; s.remove(); bad(new GHError(0, "offline")); };
+    document.head.appendChild(s);
+  });
+}
+async function paperBytes(p){
+  const key = new URL(p.pdf, location.href).href;   // cache key only: the PDF is never on this site
+  let cache = null; try { cache = await caches.open(PAPER_CACHE); } catch {}
+  const hit = cache && await cache.match(key);
+  if(hit) return hit.arrayBuffer();
+  let r;
+  try { r = await fetch(ghURL(p.pdf), { cache:"no-store", headers:{ "Authorization":`Bearer ${CFG.token}`, "Accept":"application/vnd.github.raw+json", "X-GitHub-Api-Version":"2022-11-28" } }); }
+  catch { throw new GHError(0, "offline"); }
+  if(!r.ok) throw new GHError(r.status, r.statusText);
+  const buf = await r.arrayBuffer();
+  if(cache) cache.put(key, new Response(buf.slice(0), { headers:{ "Content-Type":"application/pdf" } })).catch(()=>{});
+  return buf;
+}
+async function openPaper(pid){
+  const p = P[pid]; if(!p?.pdf) return;
+  closePaper();
+  const el = document.createElement("div");
+  el.id = "pdfv"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", `${C[p.course].name}: ${p.name}`);
+  el.innerHTML = `<div class="pv-bar"><div class="pv-title"><span class="dot" style="background:${courseColor(p.course)}"></span><span class="t"><b>${esc(C[p.course].name)}</b> <span class="muted">· ${esc(p.name)}</span></span></div>
+    <div class="row pv-tools"><span class="tiny muted" id="pvPages"></span>
+      <button class="btn ghost" onclick="zoomPaper(-1)" aria-label="Zoom out">−</button><button class="btn ghost" onclick="zoomPaper(1)" aria-label="Zoom in">+</button>
+      <button class="btn ghost" onclick="savePaper()" title="Download the PDF" aria-label="Download the PDF">⤓</button>
+      <button class="btn" onclick="closePaper()" aria-label="Close">✕</button></div></div>
+    <div class="pv-body" id="pvBody"><div class="pv-msg">Loading…</div></div>`;
+  document.body.appendChild(el); document.body.classList.add("pv-open");
+  const me = PV = { p, doc:null, buf:null, zoom:1, w:0, obs:null };
+  try {
+    const [lib, buf] = await Promise.all([loadPdfJs(), paperBytes(p)]);
+    if(PV !== me) return;
+    me.buf = buf;
+    me.doc = await lib.getDocument({ data:new Uint8Array(buf.slice(0)), isEvalSupported:false }).promise;
+    if(PV !== me) return;
+    await drawPaper();
+  } catch(e) {
+    if(PV !== me) return;
+    const msg = e.status===0 ? "Can't load this paper: you're offline and it hasn't been opened on this device before."
+      : e.status===404 ? "This paper isn't in your data repo yet." : e.status===401||e.status===403 ? "GitHub rejected the token." : "Couldn't open the paper: " + e.message;
+    document.getElementById("pvBody").innerHTML = `<div class="pv-msg">${esc(msg)}</div>`;
+  }
+}
+async function drawPaper(){
+  const me = PV, body = document.getElementById("pvBody"); if(!me?.doc || !body) return;
+  me.obs?.disconnect();
+  const n = me.doc.numPages, vp1 = (await me.doc.getPage(1)).getViewport({ scale:1 });
+  if(PV !== me) return;
+  document.getElementById("pvPages").textContent = `${n} page${n>1?"s":""}`;
+  me.w = Math.round(Math.min(body.clientWidth - 24, 900) * me.zoom);
+  body.replaceChildren();
+  me.obs = new IntersectionObserver(es => { for(const e of es) if(e.isIntersecting){ me.obs.unobserve(e.target); renderPage(me, e.target); } }, { root:body, rootMargin:"800px 0px" });
+  for(let i=1; i<=n; i++){
+    const d = document.createElement("div"); d.className = "pv-page"; d.dataset.n = i; d.dataset.w = me.w;
+    d.style.width = me.w + "px"; d.style.aspectRatio = `${vp1.width} / ${vp1.height}`;
+    body.appendChild(d); me.obs.observe(d);
+  }
+}
+async function renderPage(me, box){
+  const page = await me.doc.getPage(+box.dataset.n), vp0 = page.getViewport({ scale:1 });
+  if(PV !== me || +box.dataset.w !== me.w) return;
+  box.style.aspectRatio = `${vp0.width} / ${vp0.height}`;
+  let scale = me.w / vp0.width * Math.min(window.devicePixelRatio || 1, 3);
+  const px = vp0.width * vp0.height * scale * scale;
+  if(px > 12e6) scale *= Math.sqrt(12e6 / px);   // keep each canvas under iOS Safari's size limit
+  const vp = page.getViewport({ scale }), cv = document.createElement("canvas");
+  cv.width = Math.floor(vp.width); cv.height = Math.floor(vp.height);
+  await page.render({ canvasContext:cv.getContext("2d"), viewport:vp }).promise;
+  if(PV === me && +box.dataset.w === me.w) box.replaceChildren(cv);
+}
+function zoomPaper(dir){
+  const me = PV, body = document.getElementById("pvBody"); if(!me?.doc) return;
+  const z = Math.min(3, Math.max(0.5, me.zoom * (dir > 0 ? 1.25 : 0.8))); if(z === me.zoom) return;
+  const frac = body.scrollTop / Math.max(1, body.scrollHeight);
+  me.zoom = z;
+  drawPaper().then(() => { body.scrollTop = frac * body.scrollHeight; });
+}
+function savePaper(){
+  if(!PV?.buf) return;
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([PV.buf], { type:"application/pdf" }));
+  a.download = `${PV.p.id} ${C[PV.p.course].name} ${PV.p.name}.pdf`.replace(/[\\/:*?"<>|]/g, ""); document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000);
+}
+function closePaper(){
+  if(!PV) return;
+  PV.obs?.disconnect(); PV.doc?.destroy(); PV = null;
+  document.getElementById("pdfv")?.remove(); document.body.classList.remove("pv-open");
+}
+document.addEventListener("keydown", e => { if(e.key === "Escape" && PV) closePaper(); });
+let pvResize = 0;
+window.addEventListener("resize", () => { clearTimeout(pvResize); pvResize = setTimeout(() => { if(PV?.doc) drawPaper(); }, 200); });
 const ORDER = ["","done","part","stuck"];
 function cycleQ(pid,n){ const q=S.q[pid]||(S.q[pid]={}); q[n]=ORDER[(ORDER.indexOf(q[n]||"")+1)%ORDER.length]; if(!q[n]) delete q[n]; save();
   render(); const nb=document.querySelector(`#paper-${CSS.escape(pid)} .q:nth-child(${n})`); if(nb) nb.focus({preventScroll:true}); }
@@ -877,6 +992,7 @@ function disconnect(){
   if(dirty() && !confirm("Some changes on this device haven't reached GitHub yet and will be lost. Disconnect anyway?")) return;
   if(!dirty() && !confirm("Disconnect this device? You'll need the token to connect again.")) return;
   for(const k of [CFG_KEY, BASE_KEY, DATA_KEY, KEY, KEY+"-lastsync"]) localStorage.removeItem(k);
+  closePaper(); try { caches.delete(PAPER_CACHE); } catch {}
   CFG = null; BASE = null; D = null; S = blank(); VIEW = null;
   ["hUni","hEyebrow","hMeta"].forEach(id=>document.getElementById(id).textContent=""); document.getElementById("hTitle").textContent="Tracker";
   document.getElementById("hLogo").hidden = true; document.getElementById("weekPill").hidden = true;
