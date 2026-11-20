@@ -253,6 +253,12 @@ details.card>summary h2{margin:0}
 details.card>summary::before{content:"▸";color:var(--faint)}
 details.card[open]>summary::before{content:"▾"}
 details.card[open]>summary{margin-bottom:10px}
+/* updates */
+.li.upd{align-items:flex-start}
+.li.upd.unread{background:color-mix(in srgb,var(--accent-soft) 55%,transparent);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:6px}
+.uico{width:22px;text-align:center;font-size:15px;line-height:20px;flex-shrink:0}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--muted);text-decoration:underline;cursor:pointer}
+.srcstat .k{font-size:12px}
 /* examples paper viewer */
 body.pv-open{overflow:hidden}
 #pdfv{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;background:var(--bg)}
@@ -293,7 +299,7 @@ let D = null, TERM_START = "2026-10-08", GROUP = null;
 const KEY = "pia-michaelmas-2026-v1";
 
 /* ---------- state ---------- */
-const blank = () => ({ q:{}, qcount:{}, supo:{}, supoPaper:{}, prep:{}, labs:{}, labNames:{}, custom:[], showLec:true, showLabs:true, tab:"overview", week:null });
+const blank = () => ({ q:{}, qcount:{}, seenUpd:{}, supo:{}, supoPaper:{}, prep:{}, labs:{}, labNames:{}, custom:[], showLec:true, showLabs:true, tab:"overview", week:null });
 // sections the user has expanded this session (prep cards, past weeks, finished labs); FOCUS = row we're jumping to
 const OPEN = new Set(); let FOCUS = null;
 function toggleOpen(key, isOpen){ isOpen ? OPEN.add(key) : OPEN.delete(key); }
@@ -354,10 +360,11 @@ const issued = p => !p.issued || p.issued <= TODAY;
 const nextSupo = cid => SUPOS.find(s => s.course===cid && !S.supo[s.id]?.done && !isPast(s.date,s.end));
 
 /* ---------- tabs ---------- */
-const TABS = [["overview","Overview"],["week","Week view"],["supos","Supervisions"],["papers","Examples papers"],["labs","Labs"]];
+const TABS = [["overview","Overview"],["updates","Updates"],["week","Week view"],["supos","Supervisions"],["papers","Examples papers"],["labs","Labs"]];
 function renderTabs(){
-  const wu = writeups(), urgent = wu.some(w => !w.due || diffDays(TODAY,w.due) <= 1);
-  const badge = k => k==="labs" && wu.length ? ` <span class="badge ${urgent?"danger":"warn"}" title="${wu.length} lab write-up${wu.length>1?"s":""} outstanding">${wu.length}</span>` : "";
+  const wu = writeups(), urgent = wu.some(w => !w.due || diffDays(TODAY,w.due) <= 1), un = unreadUpd();
+  const badge = k => k==="labs" && wu.length ? ` <span class="badge ${urgent?"danger":"warn"}" title="${wu.length} lab write-up${wu.length>1?"s":""} outstanding">${wu.length}</span>`
+    : k==="updates" && un.length ? ` <span class="badge ${un.some(i=>i.kind==="action"||i.kind==="error")?"danger":"warn"}" title="${un.length} new update${un.length>1?"s":""}">${un.length}</span>` : "";
   document.getElementById("tabs").innerHTML = TABS.map(([k,l]) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${badge(k)}</button>`).join("");
   document.title = (wu.length ? `(${wu.length} write-up${wu.length>1?"s":""} due) ` : "") + (D.meta?.appTitle || "Tracker");
 }
@@ -402,7 +409,60 @@ function render(){
   renderTabs();
   const w = weekOf(TODAY);
   document.getElementById("weekPill").textContent = w<1 ? "Before term" : w>9 ? "Term over" : `Week ${w} · ${fmt(TODAY)}`;
-  m.innerHTML = ({overview:vOverview, week:vWeek, supos:vSupos, papers:vPapers, labs:vLabs})[S.tab]();
+  m.innerHTML = ({overview:vOverview, updates:vUpdates, week:vWeek, supos:vSupos, papers:vPapers, labs:vLabs})[S.tab]();
+}
+
+/* ---------- Updates (written by the scheduled checker into updates.json in the data repo) ---------- */
+const UPD_KEY = KEY+"-updates";
+let UPD = null; try { UPD = JSON.parse(localStorage.getItem(UPD_KEY) || "null"); } catch {}
+let updFetched = 0;
+async function loadUpdates(maxAge = 5*60e3){
+  if(!CFG || Date.now() - updFetched < maxAge) return;
+  updFetched = Date.now();
+  try {
+    const txt = await gh("updates.json", {}, true);
+    if(txt && txt !== localStorage.getItem(UPD_KEY)){ UPD = JSON.parse(txt); try{ localStorage.setItem(UPD_KEY, txt); }catch{} if(D) renderSoon(); }
+  } catch(e) { console.warn("updates", e); }
+}
+const unreadUpd = () => (UPD?.items || []).filter(i => !S.seenUpd?.[i.id]);
+function seeUpd(ids){ S.seenUpd ||= {}; for(const id of ids) S.seenUpd[id] = 1; save(); render(); }
+const UPD_SRC = { sheet:["Supervision sheet","📅"], moodle:["Moodle","🎓"], mail:["Mail","✉️"], checker:["Checker","⚙"] };
+const UPD_KIND = { change:["ok","updated"], new:["acc","new"], action:["danger","action"], info:["","info"], error:["warn","problem"] };
+const updAgo = iso => { const m = Math.round((Date.now() - new Date(iso)) / 60e3); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 36*60 ? `${Math.round(m/60)} h ago` : fmt(iso.slice(0,10)); };
+function updRow(i, compact){
+  const [src, ico] = UPD_SRC[i.source] || [i.source, "•"], [cls, lbl] = UPD_KIND[i.kind] || ["", i.kind], unread = !S.seenUpd?.[i.id];
+  return `<div class="li upd ${unread?"unread":""}" id="upd-${i.id}">
+    <span class="uico" title="${esc(src)}" aria-label="${esc(src)}">${ico}</span>
+    <div style="flex:1;min-width:0">
+      <div class="row between wrapflex" style="gap:6px"><b class="small">${esc(i.title)}</b>
+        <span class="row tiny muted" style="gap:6px">${i.due?dueTag(i.due):""}<span class="tag ${cls}">${lbl}</span><span>${updAgo(i.at)}</span></span></div>
+      ${i.detail && !compact?`<div class="small muted" style="margin-top:2px">${esc(i.detail)}</div>`:""}
+      <div class="row tiny" style="gap:10px;margin-top:4px">
+        ${i.link?`<a href="${esc(i.link)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Open ${esc(src.toLowerCase().startsWith("mail")?"Outlook":src)} ↗</a>`:""}
+        ${unread?`<button class="linkbtn" onclick="seeUpd(['${i.id}'])">Mark read</button>`:""}</div>
+    </div></div>`;
+}
+function updatesPanel(){
+  const un = unreadUpd(); if(!un.length) return "";
+  const top = un.slice(0, 3);
+  return `<section class="card reminder ${un.some(i=>i.kind==="action")?"bad":""}">
+    <div class="row between wrapflex"><h2 style="margin:0">New updates <span class="badge ${un.some(i=>i.kind==="action")?"danger":"warn"}">${un.length}</span></h2>
+      <span class="row" style="gap:6px"><button class="btn ghost" onclick="seeUpd(${esc(JSON.stringify(un.map(i=>i.id)))})">Mark all read</button><button class="btn" onclick="go('updates')">See all →</button></span></div>
+    <div class="list" style="margin-top:6px">${top.map(i=>updRow(i,true)).join("")}</div>${un.length>3?`<div class="tiny muted" style="margin-top:6px">and ${un.length-3} more</div>`:""}</section>`;
+}
+function vUpdates(){
+  loadUpdates(30e3);
+  if(!UPD) return `<section class="card"><h2>Updates</h2><div class="empty">No checks have run yet. The checker on your laptop looks at the supervision sheet, Moodle and your course mail at 8am, 1pm and 7pm, and what it finds shows up here.</div></section>`;
+  const un = unreadUpd(), src = UPD.sources || {};
+  const status = Object.entries(UPD_SRC).filter(([k]) => k!=="checker" || src.checker).map(([k,[name,ico]]) => { const s = src[k];
+    return `<div class="card stat srcstat"><div class="k">${ico} ${name}</div><div class="small" style="margin-top:4px">${!s?`<span class="muted">not checked yet</span>`:s.ok?`<span style="color:var(--ok)">✓ checked ${updAgo(s.at)}</span>`:`<span style="color:var(--danger)">✕ ${updAgo(s.at)}: couldn't check</span>`}</div>${s?.note?`<div class="tiny muted" style="margin-top:4px">${esc(s.note)}</div>`:""}</div>`; }).join("");
+  const byDay = {}; for(const i of UPD.items) (byDay[i.at.slice(0,10)] ||= []).push(i);
+  const list = Object.entries(byDay).map(([d, its]) => `<div class="wk tiny muted" style="margin:12px 0 4px;font-weight:600">${d===TODAY?"Today":fmt(d)}</div><div class="list">${its.map(i=>updRow(i)).join("")}</div>`).join("");
+  return `<section class="grid g-stats">${status}</section>
+    <section class="card"><div class="row between wrapflex"><h2 style="margin:0">Updates</h2>
+      <span class="row" style="gap:6px"><span class="tiny muted">${UPD.lastRun?`Last check ${updAgo(UPD.lastRun)}`:""}</span>${un.length?`<button class="btn ghost" onclick="seeUpd(${esc(JSON.stringify(un.map(i=>i.id)))})">Mark all read</button>`:""}</span></div>
+      ${list || `<div class="empty">Nothing yet.</div>`}
+      <p class="tiny faint" style="margin-top:14px">"Updated" items have already been applied to your tracker (supervision times, new papers). "Action" items need you. Mail is summarised from your course email only and never changes the tracker.</p></section>`;
 }
 
 /* ---------- all dated items (for week view + upcoming) ---------- */
@@ -453,6 +513,7 @@ function vOverview(){
   </section>
   ${overdueTodos.length?`<div class="banner"><b>Overdue:</b> ${overdueTodos.map(t=>esc(t.title)+` (${fmt(t.date)})`).join(", ")}</div>`:""}
   ${isEmpty() && BASE?`<div class="banner"><b>No progress saved yet.</b> Moving over from the old offline tracker? Bring its backup file in here: <label class="btn" style="margin-left:6px">Import backup file<input type="file" accept="application/json,.json" hidden onchange="importFile(event)"></label></div>`:""}
+  ${updatesPanel()}
   ${writeupPanel()}
   <section class="ov">
     <div class="card"><div class="row between"><h2>Next 7 days</h2><button class="btn ghost" onclick="go('week')">Week view →</button></div>
@@ -993,7 +1054,8 @@ async function reloadData(){
 function disconnect(){
   if(dirty() && !confirm("Some changes on this device haven't reached GitHub yet and will be lost. Disconnect anyway?")) return;
   if(!dirty() && !confirm("Disconnect this device? You'll need the token to connect again.")) return;
-  for(const k of [CFG_KEY, BASE_KEY, DATA_KEY, KEY, KEY+"-lastsync"]) localStorage.removeItem(k);
+  for(const k of [CFG_KEY, BASE_KEY, DATA_KEY, KEY, KEY+"-lastsync", UPD_KEY]) localStorage.removeItem(k);
+  UPD = null;
   closePaper(); try { caches.delete(PAPER_CACHE); } catch {}
   CFG = null; BASE = null; D = null; S = blank(); VIEW = null;
   ["hUni","hEyebrow","hMeta"].forEach(id=>document.getElementById(id).textContent=""); document.getElementById("hTitle").textContent="Tracker";
@@ -1016,13 +1078,13 @@ async function boot(){
       SY.state = e.status===0 ? "offline" : e.status ? "auth" : "error"; SY.err = e.message; paintSync();
       if(!D){ const m=document.getElementById("loadMsg"); if(m) m.innerHTML = e.status===0 ? "No connection, and this device has no saved copy yet. Try again when you're online." : `GitHub said: ${esc(e.message)}. <a href="#" onclick="VIEW='settings';render();return false" style="color:var(--accent)">Check settings</a>`; }
     }
-    if(D) sync();
+    if(D){ sync(); loadUpdates(0); }
   } else { render(); paintSync(); }
 }
 // pull the other device's changes when coming back to the app, when back online, and every minute while open
-document.addEventListener("visibilitychange", () => { if(document.visibilityState==="visible") sync(); else if(dirty()) sync(); });
+document.addEventListener("visibilitychange", () => { if(document.visibilityState==="visible"){ sync(); loadUpdates(60e3); } else if(dirty()) sync(); });
 window.addEventListener("online", () => sync());
-setInterval(() => { if(document.visibilityState==="visible") sync(); paintSync(); }, 60000);
+setInterval(() => { if(document.visibilityState==="visible"){ sync(); loadUpdates(); } paintSync(); }, 60000);
 window.addEventListener("pagehide", () => { if(CFG && D && dirty()) sync(); });
 if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 try{ navigator.storage?.persist?.(); }catch{}
