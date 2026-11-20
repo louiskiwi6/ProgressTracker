@@ -2,7 +2,7 @@
 // (no personal data: the timetable and progress are cached by the page itself in this device's storage,
 // and examples papers the page has opened sit in the separate "tracker-papers" cache, which this file never deletes).
 // Network first for the app, so a new version is picked up whenever you're online.
-const CACHE = "tracker-shell-v2";
+const CACHE = "tracker-shell-v3";
 const LIB = "tracker-lib-v1";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
@@ -24,8 +24,10 @@ self.addEventListener("fetch", e => {
     return;
   }
   if (url.origin !== location.origin) return;   // GitHub API, fonts: straight to network
+  // "no-cache" revalidates with the server, so an update shows up straight away instead of after
+  // GitHub Pages' 10-minute browser cache (a stale page with fresh data can show wrong counts)
   e.respondWith(
-    fetch(e.request).then(r => {
+    fetch(e.request.url, { cache: "no-cache", credentials: "same-origin" }).then(r => {
       if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
       return r;
     }).catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match("index.html")))
