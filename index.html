@@ -442,10 +442,15 @@ function updRow(i, compact){
         ${unread?`<button class="linkbtn" onclick="seeUpd(['${i.id}'])">Mark read</button>`:""}</div>
     </div></div>`;
 }
+// the laptop can't tell you it's off, so the app notices when no check has run for over a day
+function staleBanner(){
+  if(!UPD?.lastRun || Date.now() - new Date(UPD.lastRun) < 26*3600e3) return "";
+  return `<div class="banner"><b>⚠ No update check since ${updAgo(UPD.lastRun)}.</b> The checker runs on your laptop: is it on and logged in, with Chrome open? Sheet, Moodle and mail changes won't show up until it runs again.</div>`;
+}
 function updatesPanel(){
-  const un = unreadUpd(); if(!un.length) return "";
+  const un = unreadUpd(); if(!un.length) return staleBanner();
   const top = un.slice(0, 3);
-  return `<section class="card reminder ${un.some(i=>i.kind==="action")?"bad":""}">
+  return `${staleBanner()}<section class="card reminder ${un.some(i=>i.kind==="action")?"bad":""}">
     <div class="row between wrapflex"><h2 style="margin:0">New updates <span class="badge ${un.some(i=>i.kind==="action")?"danger":"warn"}">${un.length}</span></h2>
       <span class="row" style="gap:6px"><button class="btn ghost" onclick="seeUpd(${esc(JSON.stringify(un.map(i=>i.id)))})">Mark all read</button><button class="btn" onclick="go('updates')">See all →</button></span></div>
     <div class="list" style="margin-top:6px">${top.map(i=>updRow(i,true)).join("")}</div>${un.length>3?`<div class="tiny muted" style="margin-top:6px">and ${un.length-3} more</div>`:""}</section>`;
@@ -458,7 +463,7 @@ function vUpdates(){
     return `<div class="card stat srcstat"><div class="k">${ico} ${name}</div><div class="small" style="margin-top:4px">${!s?`<span class="muted">not checked yet</span>`:s.ok?`<span style="color:var(--ok)">✓ checked ${updAgo(s.at)}</span>`:`<span style="color:var(--danger)">✕ ${updAgo(s.at)}: couldn't check</span>`}</div>${s?.note?`<div class="tiny muted" style="margin-top:4px">${esc(s.note)}</div>`:""}</div>`; }).join("");
   const byDay = {}; for(const i of UPD.items) (byDay[i.at.slice(0,10)] ||= []).push(i);
   const list = Object.entries(byDay).map(([d, its]) => `<div class="wk tiny muted" style="margin:12px 0 4px;font-weight:600">${d===TODAY?"Today":fmt(d)}</div><div class="list">${its.map(i=>updRow(i)).join("")}</div>`).join("");
-  return `<section class="grid g-stats">${status}</section>
+  return `${staleBanner()}<section class="grid g-stats">${status}</section>
     <section class="card"><div class="row between wrapflex"><h2 style="margin:0">Updates</h2>
       <span class="row" style="gap:6px"><span class="tiny muted">${UPD.lastRun?`Last check ${updAgo(UPD.lastRun)}`:""}</span>${un.length?`<button class="btn ghost" onclick="seeUpd(${esc(JSON.stringify(un.map(i=>i.id)))})">Mark all read</button>`:""}</span></div>
       ${list || `<div class="empty">Nothing yet.</div>`}
@@ -1037,6 +1042,7 @@ function vSettings(){
     </div>
     <div class="row wrapflex" style="margin-top:14px"><button class="btn primary" onclick="sync().then(()=>VIEW==='settings'&&render())">Sync now</button><button class="btn" onclick="reloadData()">Reload timetable</button></div>
   </section>
+  <section class="card" style="max-width:640px"><h2>Notifications</h2>${pushCard()}</section>
   <section class="card" style="max-width:640px"><h2>Backup file</h2>
     <p class="small muted" style="margin-top:0">GitHub already keeps every version. These are for moving progress in or out by hand, e.g. from the old offline tracker.</p>
     <div class="row wrapflex"><button class="btn" onclick="exportFile()">Download backup</button>
@@ -1047,6 +1053,73 @@ function vSettings(){
     <div class="row wrapflex"><button class="btn" onclick="disconnect()">Disconnect this device</button></div>
   </section>`;
 }
+/* ---------- notifications (Web Push: the checker on the laptop sends them; devices are listed in push.json) ---------- */
+const IOS = /iPhone|iPad/.test(navigator.userAgent);
+const STANDALONE = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const PUSH_OK = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && location.protocol === "https:";
+let PUSHREG = null, PUSHSUB = null, pushLoading = false;
+const b64uBytes = s => Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/") + "===".slice((s.length+3)%4)), c => c.charCodeAt(0));
+async function pushState(){
+  if(!PUSH_OK || pushLoading) return;
+  pushLoading = true;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration(); PUSHSUB = reg ? await reg.pushManager.getSubscription() : null;
+    const j = await gh("push.json"); PUSHREG = { sha:j?.sha, data: j ? JSON.parse(b64dec(j.content)) : { subs:[], notify:["error"] } };
+  } catch(e) { PUSHREG = { err: e.message }; }
+  pushLoading = false;
+  if(VIEW === "settings") render();
+}
+async function savePush(mutate, message){
+  for(let attempt = 0; attempt < 3; attempt++){
+    const j = await gh("push.json"), data = j ? JSON.parse(b64dec(j.content)) : { subs:[], notify:["error"] };
+    mutate(data);
+    try { const r = await gh("push.json", { method:"PUT", body: JSON.stringify({ message, content: b64enc(JSON.stringify(data, null, 1) + "\n"), ...(j ? { sha:j.sha } : {}) }) });
+      PUSHREG = { sha:r.content.sha, data }; return; }
+    catch(e) { if(e.status !== 409 && e.status !== 422) throw e; }   // someone else saved it in between: retry
+  }
+  throw new Error("GitHub kept changing under us, try again");
+}
+async function pushOn(){
+  try {
+    if(!PUSHREG?.data?.publicKey) throw new Error("the checker hasn't set up notifications yet (no key in push.json)");
+    const perm = await Notification.requestPermission();
+    if(perm !== "granted") throw new Error(perm === "denied" ? "notifications are blocked for this app in your phone's settings" : "permission wasn't given");
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: b64uBytes(PUSHREG.data.publicKey) });
+    const j = sub.toJSON();
+    await savePush(d => { d.subs = (d.subs || []).filter(s => s.endpoint !== j.endpoint);
+      d.subs.push({ endpoint:j.endpoint, keys:j.keys, device: DEVICE + (IOS ? " (iOS)" : ""), added: new Date().toISOString() }); }, `notifications on (${DEVICE})`);
+    PUSHSUB = sub; render();
+    reg.showNotification("Notifications are on", { body:"The tracker will tell you here when a check goes wrong.", tag:"pia-tracker-test", icon:"icon-192.png" });
+  } catch(e) { alert("Couldn't turn on notifications: " + e.message); }
+}
+async function pushOff(){
+  try {
+    const ep = PUSHSUB?.endpoint;
+    if(PUSHSUB) await PUSHSUB.unsubscribe();
+    if(ep) await savePush(d => { d.subs = (d.subs || []).filter(s => s.endpoint !== ep); }, `notifications off (${DEVICE})`);
+    PUSHSUB = null; render();
+  } catch(e) { alert("Couldn't turn off notifications: " + e.message); }
+}
+async function pushKinds(actions){
+  try { await savePush(d => { d.notify = actions ? ["error","action"] : ["error"]; }, `notify about ${actions ? "problems + actions" : "problems"}`); render(); }
+  catch(e) { alert("Couldn't save that: " + e.message); render(); }
+}
+function pushCard(){
+  if(!PUSH_OK) return `<p class="small muted" style="margin-top:0">${IOS && !STANDALONE
+    ? "On iPhone, notifications only work when the tracker is on your Home Screen: in Safari tap Share → <b>Add to Home Screen</b>, then open it from the new icon and come back here."
+    : "This browser can't receive push notifications."}</p>`;
+  if(!PUSHREG){ pushState(); return `<p class="small muted" style="margin-top:0">Loading…</p>`; }
+  if(PUSHREG.err) return `<p class="small muted" style="margin-top:0">Couldn't load the notification settings: ${esc(PUSHREG.err)}</p>`;
+  const subs = PUSHREG.data.subs || [], on = PUSHSUB && subs.some(s => s.endpoint === PUSHSUB.endpoint), actions = (PUSHREG.data.notify || []).includes("action");
+  return `<p class="small muted" style="margin-top:0">The checker on your laptop sends a notification when a check goes wrong (it couldn't reach the sheet, Moodle or your mail, or a scheduled run failed).</p>
+    ${on ? `<div class="row wrapflex"><span class="tag ok">On for this device</span><button class="btn" onclick="pushOff()">Turn off</button></div>
+      <label class="row small" style="margin-top:10px"><input type="checkbox" ${actions?"checked":""} onchange="pushKinds(this.checked)"> Also notify me about things I need to do (action items, e.g. an email asking for something)</label>`
+      : `<button class="btn primary" onclick="pushOn()">Turn on notifications on this device</button>`}
+    <p class="tiny faint" style="margin-top:10px">${subs.length} device${subs.length===1?"":"s"} signed up. Messages are encrypted end to end; the phone's push service only passes them on.</p>`;
+}
+navigator.serviceWorker?.addEventListener("message", e => { if(e.data?.goTab && D){ VIEW = null; go(e.data.goTab); } });
+
 async function reloadData(){
   try{ const txt = await gh("data.json", {}, true); if(txt){ localStorage.setItem(DATA_KEY, txt); initData(JSON.parse(txt)); } render(); }
   catch(e){ alert("Couldn't reload the timetable: " + (e.status===0 ? "no connection" : e.message)); }
@@ -1066,6 +1139,9 @@ function vLoading(){ return `<section class="card" style="max-width:560px;margin
 
 /* ---------- start ---------- */
 async function boot(){
+  // opened from a notification (./?tab=updates): go to that tab, then tidy the address
+  const qtab = new URLSearchParams(location.search).get("tab");
+  if(qtab && TABS.some(t => t[0] === qtab)){ S.tab = qtab; saveLocal(); history.replaceState(null, "", location.pathname); }
   if(CFG){
     const cached = localStorage.getItem(DATA_KEY);
     if(cached){ try{ initData(JSON.parse(cached)); }catch{} }
