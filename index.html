@@ -340,7 +340,7 @@ const supoPaper = s => S.supoPaper[s.id] ?? s.paper;
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 function paperStats(pid){
-  const n = S.qcount[pid] ?? QDEF, q = S.q[pid] || {};
+  const n = S.qcount[pid] ?? P[pid]?.q ?? QDEF, q = S.q[pid] || {};   // set by hand > counted from the paper > default
   let done=0, part=0, stuck=[];
   for(let i=1;i<=n;i++){ const v=q[i]; if(v==="done")done++; else if(v==="part")part++; else if(v==="stuck")stuck.push(i); }
   const complete = n>0 && done===n;
@@ -741,10 +741,12 @@ const ORDER = ["","done","part","stuck"];
 function cycleQ(pid,n){ const q=S.q[pid]||(S.q[pid]={}); q[n]=ORDER[(ORDER.indexOf(q[n]||"")+1)%ORDER.length]; if(!q[n]) delete q[n]; save();
   render(); const nb=document.querySelector(`#paper-${CSS.escape(pid)} .q:nth-child(${n})`); if(nb) nb.focus({preventScroll:true}); }
 function setQc(pid,v){
-  v = Math.max(1, Math.min(40, parseInt(v) || QDEF));
+  const def = P[pid]?.q ?? QDEF;
+  v = Math.max(1, Math.min(40, parseInt(v) || def));
   const q = S.q[pid] || {}, lost = Object.keys(q).filter(k => +k > v);
   if(lost.length && !confirm(`Q${lost.join(", Q")} already have a status. Hide them? (They come back if you add the questions again.)`)){ render(); return; }
-  S.qcount[pid] = v; save(); render();
+  if(v === def) delete S.qcount[pid]; else S.qcount[pid] = v;   // back to the paper's own count: follow it again
+  save(); render();
 }
 
 /* ---------- Labs ---------- */
