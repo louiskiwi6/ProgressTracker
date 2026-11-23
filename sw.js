@@ -2,7 +2,7 @@
 // (no personal data: the timetable and progress are cached by the page itself in this device's storage,
 // and examples papers the page has opened sit in the separate "tracker-papers" cache, which this file never deletes).
 // Network first for the app, so a new version is picked up whenever you're online.
-const CACHE = "tracker-shell-v4";
+const CACHE = "tracker-shell-v5";
 const LIB = "tracker-lib-v1";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
 
@@ -34,20 +34,3 @@ self.addEventListener("fetch", e => {
   );
 });
 
-// Notifications from the checker on the laptop (Web Push; the message is decrypted by the browser).
-self.addEventListener("push", e => {
-  let m = {};
-  try { m = e.data ? e.data.json() : {}; } catch { m = { title: e.data ? e.data.text() : "" }; }
-  e.waitUntil(self.registration.showNotification(m.title || "Tracker", {
-    body: m.body || "", tag: m.tag || "pia-tracker", icon: "icon-192.png", badge: "icon-192.png", data: { url: m.url || "./?tab=updates" }
-  }));
-});
-self.addEventListener("notificationclick", e => {
-  e.notification.close();
-  const url = new URL(e.notification.data?.url || "./", self.registration.scope).href;
-  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(cs => {
-    const c = cs.find(x => x.url.startsWith(self.registration.scope));
-    if (c) { c.postMessage({ goUrl: url }); return c.focus(); }
-    return self.clients.openWindow(url);
-  }));
-});
